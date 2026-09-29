@@ -16,5 +16,6 @@ define( 'NOTES_ADDA_PATH', plugin_dir_path( __FILE__ ) );
 define( 'NOTES_ADDA_URL', plugin_dir_url( __FILE__ ) );
 
 require_once NOTES_ADDA_PATH . 'includes/class-notes-adda-activator.php';
+require_once NOTES_ADDA_PATH . 'includes/class-notes-adda-tags.php';
 
 register_activation_hook( __FILE__, array( 'Notes_Adda_Activator', 'activate' ) );
