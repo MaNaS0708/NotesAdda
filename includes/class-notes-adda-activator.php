@@ -17,6 +17,7 @@ class Notes_Adda_Activator {
 		$user_tags_table  = $wpdb->prefix . 'notes_adda_user_tags';
 		$likes_table      = $wpdb->prefix . 'notes_adda_likes';
 		$reports_table    = $wpdb->prefix . 'notes_adda_reports';
+		$profiles_table   = $wpdb->prefix . 'notes_adda_profiles';
 
 		require_once ABSPATH . 'wp-admin/includes/upgrade.php';
 
@@ -81,6 +82,17 @@ class Notes_Adda_Activator {
 				PRIMARY KEY (id),
 				KEY note_id (note_id),
 				KEY status (status)
+			) $charset_collate;",
+
+			"CREATE TABLE $profiles_table (
+				id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+				user_id bigint(20) unsigned NOT NULL,
+				college varchar(255) NOT NULL DEFAULT '',
+				bio text NOT NULL DEFAULT '',
+				created_at datetime NOT NULL,
+				updated_at datetime NOT NULL,
+				PRIMARY KEY (id),
+				UNIQUE KEY user_id (user_id)
 			) $charset_collate;"
 		);
 
