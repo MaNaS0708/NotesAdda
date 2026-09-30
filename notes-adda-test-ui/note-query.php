@@ -3,42 +3,78 @@ require_once '/var/www/html/wordpress/wp-load.php';
 
 $action_result = null;
 $error_result  = null;
+$search_query  = isset( $_GET['search'] ) ? trim( $_GET['search'] ) : '';
+$sort_option   = isset( $_GET['sort'] ) ? trim( $_GET['sort'] ) : 'recent';
+$page          = isset( $_GET['page'] ) ? max( 1, (int) $_GET['page'] ) : 1;
 
-if ( $_SERVER['REQUEST_METHOD'] === 'GET' && isset( $_GET['action'] ) && $_GET['action'] === 'query_notes' ) {
-	$args = array();
+// Map sort option to backend orderby and order parameters
+$orderby = 'created_at';
+$order   = 'DESC';
 
-	if ( ! empty( $_GET['search'] ) ) {
-		$args['search'] = $_GET['search'];
-	}
-	if ( ! empty( $_GET['owner_id'] ) ) {
-		$args['owner_id'] = $_GET['owner_id'];
-	}
-	if ( ! empty( $_GET['tag_id'] ) ) {
-		$args['tag_id'] = $_GET['tag_id'];
-	}
-	if ( ! empty( $_GET['tag_slug'] ) ) {
-		$args['tag_slug'] = $_GET['tag_slug'];
-	}
-	if ( ! empty( $_GET['subject'] ) ) {
-		$args['subject'] = $_GET['subject'];
-	}
-	if ( isset( $_GET['is_whole_notes'] ) && $_GET['is_whole_notes'] !== '' ) {
-		$args['is_whole_notes'] = $_GET['is_whole_notes'];
-	}
-	if ( ! empty( $_GET['page'] ) ) {
-		$args['page'] = $_GET['page'];
-	}
-	if ( ! empty( $_GET['per_page'] ) ) {
-		$args['per_page'] = $_GET['per_page'];
-	}
-	if ( ! empty( $_GET['orderby'] ) ) {
-		$args['orderby'] = $_GET['orderby'];
-	}
-	if ( ! empty( $_GET['order'] ) ) {
-		$args['order'] = $_GET['order'];
-	}
+switch ( $sort_option ) {
+	case 'likes':
+		$orderby = 'like_count';
+		$order   = 'DESC';
+		break;
+	case 'oldest':
+		$orderby = 'created_at';
+		$order   = 'ASC';
+		break;
+	case 'title_asc':
+		$orderby = 'title';
+		$order   = 'ASC';
+		break;
+	case 'title_desc':
+		$orderby = 'title';
+		$order   = 'DESC';
+		break;
+	case 'recent':
+	default:
+		$orderby = 'created_at';
+		$order   = 'DESC';
+		break;
+}
 
-	$res = Notes_Adda_Note_Query::get_notes( $args );
+if ( $_SERVER['REQUEST_METHOD'] === 'GET' ) {
+	$args = array(
+		'page'     => $page,
+		'per_page' => 10,
+		'orderby'  => $orderby,
+		'order'    => $order,
+	);
+
+	if ( '' !== $search_query ) {
+		// 1. Check if search query matches an existing tag slug
+		$normalized_slug = str_replace( '-', '', sanitize_title( $search_query ) );
+		
+		global $wpdb;
+		$tag_exists = $wpdb->get_var(
+			$wpdb->prepare(
+				"SELECT id FROM {$wpdb->prefix}notes_adda_tags WHERE slug = %s",
+				$normalized_slug
+			)
+		);
+
+		if ( $tag_exists ) {
+			// Query notes assigned to this tag
+			$args['tag_slug'] = $normalized_slug;
+			$res = Notes_Adda_Note_Query::get_notes( $args );
+
+			// Fallback to keyword search if tag query returned 0 items
+			if ( ! is_wp_error( $res ) && 0 === $res['total'] ) {
+				unset( $args['tag_slug'] );
+				$args['search'] = $search_query;
+				$res = Notes_Adda_Note_Query::get_notes( $args );
+			}
+		} else {
+			// Query notes by keyword (title, subject, chapter, description)
+			$args['search'] = $search_query;
+			$res = Notes_Adda_Note_Query::get_notes( $args );
+		}
+	} else {
+		// Unfiltered search (all notes)
+		$res = Notes_Adda_Note_Query::get_notes( $args );
+	}
 
 	if ( is_wp_error( $res ) ) {
 		$error_result = array(
@@ -54,64 +90,44 @@ if ( $_SERVER['REQUEST_METHOD'] === 'GET' && isset( $_GET['action'] ) && $_GET['
 <html>
 <head>
 	<meta charset="utf-8">
-	<title>Test - Note Search &amp; Query</title>
+	<title>Note Search &amp; Filter - Notes Adda</title>
 </head>
 <body>
 	<p><a href="index.php">&laquo; Back to Index</a></p>
-	<h1>Note Search &amp; Query Test Page (Notes_Adda_Note_Query)</h1>
+	<h1>Note Search &amp; Filter Manager</h1>
+	<p>Type a tag name (e.g. <code>Sem 7</code>, <code>Physics</code>) or keyword in the single search bar below to filter notes, and select a sorting order.</p>
 	<hr>
 
-	<h2>Filter &amp; Search Notes</h2>
+	<!-- Search & Sort Form -->
 	<form method="GET" action="note-query.php">
-		<input type="hidden" name="action" value="query_notes">
+		<p>
+			<label><strong>Search Bar (Tags or Keywords):</strong></label><br>
+			<input type="text" name="search" value="<?php echo htmlspecialchars( $search_query ); ?>" placeholder="e.g. Sem 7, Physics, Algorithms..." style="width: 350px; padding: 5px;">
+		</p>
 
-		<label>Keyword Search (title/subject/chapter/description):</label><br>
-		<input type="text" name="search" value="<?php echo isset($_GET['search']) ? htmlspecialchars($_GET['search']) : ''; ?>"><br><br>
+		<p>
+			<label><strong>Sort Notes By:</strong></label><br>
+			<select name="sort" style="padding: 5px;">
+				<option value="recent" <?php selected( $sort_option, 'recent' ); ?>>Recent / Latest</option>
+				<option value="likes" <?php selected( $sort_option, 'likes' ); ?>>Most Liked</option>
+				<option value="oldest" <?php selected( $sort_option, 'oldest' ); ?>>Oldest First</option>
+				<option value="title_asc" <?php selected( $sort_option, 'title_asc' ); ?>>Alphabetical (A-Z)</option>
+				<option value="title_desc" <?php selected( $sort_option, 'title_desc' ); ?>>Alphabetical (Z-A)</option>
+			</select>
+		</p>
 
-		<label>Owner WP User ID:</label><br>
-		<input type="number" name="owner_id" value="<?php echo isset($_GET['owner_id']) ? htmlspecialchars($_GET['owner_id']) : ''; ?>"><br><br>
-
-		<label>Tag ID:</label><br>
-		<input type="number" name="tag_id" value="<?php echo isset($_GET['tag_id']) ? htmlspecialchars($_GET['tag_id']) : ''; ?>"><br><br>
-
-		<label>Tag Slug:</label><br>
-		<input type="text" name="tag_slug" value="<?php echo isset($_GET['tag_slug']) ? htmlspecialchars($_GET['tag_slug']) : ''; ?>"><br><br>
-
-		<label>Subject (Exact):</label><br>
-		<input type="text" name="subject" value="<?php echo isset($_GET['subject']) ? htmlspecialchars($_GET['subject']) : ''; ?>"><br><br>
-
-		<label>Is Whole Notes?</label><br>
-		<select name="is_whole_notes">
-			<option value="">-- All --</option>
-			<option value="1" <?php echo (isset($_GET['is_whole_notes']) && $_GET['is_whole_notes'] === '1') ? 'selected' : ''; ?>>Yes (1)</option>
-			<option value="0" <?php echo (isset($_GET['is_whole_notes']) && $_GET['is_whole_notes'] === '0') ? 'selected' : ''; ?>>No (0)</option>
-		</select><br><br>
-
-		<label>Page:</label><br>
-		<input type="number" name="page" value="<?php echo isset($_GET['page']) ? htmlspecialchars($_GET['page']) : '1'; ?>"><br><br>
-
-		<label>Per Page (1-50):</label><br>
-		<input type="number" name="per_page" value="<?php echo isset($_GET['per_page']) ? htmlspecialchars($_GET['per_page']) : '10'; ?>"><br><br>
-
-		<label>Order By:</label><br>
-		<select name="orderby">
-			<option value="created_at" <?php echo (isset($_GET['orderby']) && $_GET['orderby'] === 'created_at') ? 'selected' : ''; ?>>created_at</option>
-			<option value="title" <?php echo (isset($_GET['orderby']) && $_GET['orderby'] === 'title') ? 'selected' : ''; ?>>title</option>
-			<option value="like_count" <?php echo (isset($_GET['orderby']) && $_GET['orderby'] === 'like_count') ? 'selected' : ''; ?>>like_count</option>
-			<option value="invalid_column" <?php echo (isset($_GET['orderby']) && $_GET['orderby'] === 'invalid_column') ? 'selected' : ''; ?>>[TEST INVALID ORDERBY]</option>
-		</select><br><br>
-
-		<label>Order Direction:</label><br>
-		<select name="order">
-			<option value="DESC" <?php echo (isset($_GET['order']) && $_GET['order'] === 'DESC') ? 'selected' : ''; ?>>DESC</option>
-			<option value="ASC" <?php echo (isset($_GET['order']) && $_GET['order'] === 'ASC') ? 'selected' : ''; ?>>ASC</option>
-		</select><br><br>
-
-		<button type="submit">Run Query</button>
+		<p>
+			<button type="submit" style="padding: 6px 14px;">Search Notes</button>
+			<?php if ( '' !== $search_query || 'recent' !== $sort_option ) : ?>
+				<a href="note-query.php" style="margin-left: 10px;">Clear Search</a>
+			<?php endif; ?>
+		</p>
 	</form>
 
 	<hr>
-	<h2>Raw Execution Result</h2>
+
+	<!-- Execution Output & Results -->
+	<h2>Search Results</h2>
 
 	<?php if ( $error_result ) : ?>
 		<div style="background-color: #ffcccc; padding: 10px; border: 1px solid red;">
@@ -120,15 +136,60 @@ if ( $_SERVER['REQUEST_METHOD'] === 'GET' && isset( $_GET['action'] ) && $_GET['
 			<p><strong>Message:</strong> <?php echo htmlspecialchars( $error_result['message'] ); ?></p>
 		</div>
 	<?php elseif ( null !== $action_result ) : ?>
-		<div style="background-color: #ccffcc; padding: 10px; border: 1px solid green;">
-			<h3>Status: SUCCESS</h3>
-			<p><strong>Total Matches:</strong> <?php echo $action_result['total']; ?> | 
-			<strong>Current Page:</strong> <?php echo $action_result['page']; ?> / <?php echo $action_result['total_pages']; ?> | 
-			<strong>Items Per Page:</strong> <?php echo $action_result['per_page']; ?></p>
+		<p>
+			<strong>Total Matching Notes Found:</strong> <?php echo (int) $action_result['total']; ?> | 
+			<strong>Current Page:</strong> <?php echo (int) $action_result['page']; ?> of <?php echo (int) $action_result['total_pages']; ?> | 
+			<strong>Sorted By:</strong> <?php echo htmlspecialchars( $sort_option ); ?>
+		</p>
+
+		<?php if ( empty( $action_result['items'] ) ) : ?>
+			<p><em>No notes found matching your search. Try searching for another tag or keyword.</em></p>
+		<?php else : ?>
+			<table border="1" cellpadding="8" cellspacing="0" style="width: 100%; border-collapse: collapse;">
+				<thead>
+					<tr style="background-color: #f0f0f0;">
+						<th>ID</th>
+						<th>Title</th>
+						<th>Subject</th>
+						<th>Chapter</th>
+						<th>Description</th>
+						<th>Attached Tags</th>
+						<th>Likes</th>
+						<th>Created At</th>
+					</tr>
+				</thead>
+				<tbody>
+					<?php foreach ( $action_result['items'] as $note ) : ?>
+						<?php 
+						// Fetch attached tags for display
+						$attached_tags = Notes_Adda_Note_Tags::get_tags( $note->id );
+						$tag_labels    = array();
+						if ( is_array( $attached_tags ) ) {
+							foreach ( $attached_tags as $t ) {
+								$tag_labels[] = htmlspecialchars( $t->name . ' (' . $t->type . ')' );
+							}
+						}
+						?>
+						<tr>
+							<td><?php echo htmlspecialchars( $note->id ); ?></td>
+							<td><strong><?php echo htmlspecialchars( $note->title ); ?></strong></td>
+							<td><?php echo htmlspecialchars( $note->subject ); ?></td>
+							<td><?php echo htmlspecialchars( $note->chapter ); ?></td>
+							<td><?php echo htmlspecialchars( $note->description ); ?></td>
+							<td><?php echo ! empty( $tag_labels ) ? implode( ', ', $tag_labels ) : '<em>None</em>'; ?></td>
+							<td><?php echo htmlspecialchars( $note->like_count ); ?></td>
+							<td><?php echo htmlspecialchars( $note->created_at ); ?></td>
+						</tr>
+					<?php endforeach; ?>
+				</tbody>
+			</table>
+		<?php endif; ?>
+
+		<!-- Raw Execution Data -->
+		<details style="margin-top: 20px;">
+			<summary>View Raw Output Object</summary>
 			<pre><?php print_r( $action_result ); ?></pre>
-		</div>
-	<?php else : ?>
-		<p>No query executed yet. Click "Run Query" above.</p>
+		</details>
 	<?php endif; ?>
 
 </body>
