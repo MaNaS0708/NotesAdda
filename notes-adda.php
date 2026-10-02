@@ -25,4 +25,5 @@ require_once NOTES_ADDA_PATH . 'includes/class-notes-adda-likes.php';
 require_once NOTES_ADDA_PATH . 'includes/class-notes-adda-reports.php';
 require_once NOTES_ADDA_PATH . 'includes/class-notes-adda-ajax.php';
 require_once NOTES_ADDA_PATH . 'includes/class-notes-adda-frontend.php';
+require_once NOTES_ADDA_PATH . 'includes/class-notes-adda-uploads.php';
 register_activation_hook( __FILE__, array( 'Notes_Adda_Activator', 'activate' ) );

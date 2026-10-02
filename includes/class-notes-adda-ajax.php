@@ -34,6 +34,8 @@ class Notes_Adda_Ajax {
 		// Reports
 		add_action( 'wp_ajax_notes_adda_create_report', array( __CLASS__, 'create_report' ) );
 		add_action( 'wp_ajax_notes_adda_update_report_status', array( __CLASS__, 'update_report_status' ) );
+		// Uploads
+		add_action( 'wp_ajax_notes_adda_upload_note_file', array( __CLASS__, 'upload_note_file' ) );
 	}
 
 	/**
@@ -338,6 +340,25 @@ class Notes_Adda_Ajax {
 		$status = isset( $_POST['status'] ) ? sanitize_text_field( wp_unslash( $_POST['status'] ) ) : '';
 
 		$result = Notes_Adda_Reports::update_status( $report_id, $user_id, $status );
+		if ( is_wp_error( $result ) ) {
+			self::send_error( $result );
+		}
+
+		wp_send_json_success( $result );
+	}
+
+	/**
+	 * Upload file handler.
+	 */
+	public static function upload_note_file() {
+		$user_id = self::check_auth();
+
+		if ( ! isset( $_FILES['file'] ) ) {
+			self::send_error( new WP_Error( 'notes_adda_no_file', 'No file was provided.' ) );
+		}
+
+		$result = Notes_Adda_Uploads::upload_note_file( $user_id, $_FILES['file'] );
+
 		if ( is_wp_error( $result ) ) {
 			self::send_error( $result );
 		}

@@ -215,7 +215,10 @@
                 $('#na-note-subject').val(noteData.subject);
                 $('#na-note-chapter').val(noteData.chapter);
                 $('#na-note-description').val(noteData.description);
+                $('#na-note-file').val('');
+                $('#na-note-file-id').val(noteData.file_id || '');
                 $('#na-note-file-url').val(noteData.file_url);
+                $('#na-file-upload-status').text('Current file: ' + (noteData.file_url ? noteData.file_url.split('/').pop() : ''));
                 $('#na-note-is-whole').prop('checked', parseInt(noteData.is_whole_notes) === 1);
                 
                 $.get(NotesAdda.ajax_url, {
@@ -235,15 +238,82 @@
                 $('#na-note-form')[0].reset();
                 $('#na-note-id').val('');
                 $('#na-note-tags').val('');
+                $('#na-note-file').val('');
+                $('#na-note-file-id').val('');
+                $('#na-note-file-url').val('');
+                $('#na-file-upload-status').text('');
             }
             $('#na-note-form-modal').addClass('open');
         },
 
         saveNote: function() {
             const self = this;
+            const $submitBtn = $('#na-note-form button[type="submit"]');
+            const fileInput = $('#na-note-file')[0];
+            const isEdit = $('#na-note-id').val() !== '';
+
+            $('#na-form-message').html('');
+
+            if (fileInput.files.length > 0) {
+                const file = fileInput.files[0];
+                if (file.type !== 'application/pdf') {
+                    $('#na-form-message').html('<p style="color:#f87171;">Only PDF files are allowed.</p>');
+                    return;
+                }
+                if (file.size > 25 * 1024 * 1024) {
+                    $('#na-form-message').html('<p style="color:#f87171;">File exceeds 25 MB limit.</p>');
+                    return;
+                }
+
+                $submitBtn.prop('disabled', true);
+                $('#na-file-upload-status').text('Uploading PDF, please wait...');
+
+                const uploadData = new FormData();
+                uploadData.append('action', 'notes_adda_upload_note_file');
+                uploadData.append('file', file);
+                uploadData.append('_ajax_nonce', NotesAdda.nonce);
+
+                $.ajax({
+                    url: NotesAdda.ajax_url,
+                    type: 'POST',
+                    data: uploadData,
+                    processData: false,
+                    contentType: false,
+                    success: function(res) {
+                        if (res.success) {
+                            $('#na-note-file-id').val(res.data.file_id);
+                            $('#na-note-file-url').val(res.data.file_url);
+                            $('#na-file-upload-status').text('Upload complete.');
+                            self.submitNoteForm();
+                        } else {
+                            $submitBtn.prop('disabled', false);
+                            $('#na-file-upload-status').text('');
+                            $('#na-form-message').html('<p style="color:#f87171;">Upload Error: ' + res.data.message + '</p>');
+                        }
+                    },
+                    error: function(xhr) {
+                        $submitBtn.prop('disabled', false);
+                        $('#na-file-upload-status').text('');
+                        const msg = xhr.responseJSON ? xhr.responseJSON.data.message : 'An error occurred during upload.';
+                        $('#na-form-message').html('<p style="color:#f87171;">Upload Error: ' + msg + '</p>');
+                    }
+                });
+            } else {
+                if (!isEdit || $('#na-note-file-url').val() === '') {
+                    $('#na-form-message').html('<p style="color:#f87171;">Please select a PDF file.</p>');
+                    return;
+                }
+                self.submitNoteForm();
+            }
+        },
+
+        submitNoteForm: function() {
+            const self = this;
             const isEdit = $('#na-note-id').val() !== '';
             const action = isEdit ? 'notes_adda_update_note' : 'notes_adda_create_note';
+            const $submitBtn = $('#na-note-form button[type="submit"]');
             
+            $submitBtn.prop('disabled', true);
             const formData = $('#na-note-form').serializeArray();
             formData.push({name: 'action', value: action});
             formData.push({name: '_ajax_nonce', value: NotesAdda.nonce});
@@ -257,12 +327,12 @@
                 type: 'POST',
                 data: formData,
                 success: function(res) {
+                    $submitBtn.prop('disabled', false);
                     if (res.success) {
                         const note_id = res.data.id;
                         const tagsRaw = $('#na-note-tags').val();
                         if (tagsRaw.trim() !== '' || isEdit) {
                             const tagsArr = tagsRaw.split(',').map(t => t.trim()).filter(t => t);
-                            // Tag array format: array of strings is treated as 'other' by the backend.
                             $.post(NotesAdda.ajax_url, {
                                 action: 'notes_adda_set_note_tags',
                                 note_id: note_id,
@@ -286,6 +356,7 @@
                     }
                 },
                 error: function(xhr) {
+                    $submitBtn.prop('disabled', false);
                     const msg = xhr.responseJSON ? xhr.responseJSON.data.message : 'An error occurred';
                     $('#na-form-message').html('<p style="color:#f87171;">' + msg + '</p>');
                 }

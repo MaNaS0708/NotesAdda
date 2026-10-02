@@ -97,8 +97,11 @@
                     </div>
 
                     <div class="na-form-group">
-                        <label>File URL</label>
-                        <input type="url" id="na-note-file-url" name="file_url" class="na-input" required>
+                        <label>PDF File</label>
+                        <input type="file" id="na-note-file" accept="application/pdf" class="na-input">
+                        <input type="hidden" id="na-note-file-url" name="file_url" value="">
+                        <input type="hidden" id="na-note-file-id" name="file_id" value="">
+                        <div id="na-file-upload-status" style="margin-top: 5px; font-size: 0.85em; color: var(--na-text-muted);"></div>
                     </div>
 
                     <div class="na-form-group na-checkbox-group">
