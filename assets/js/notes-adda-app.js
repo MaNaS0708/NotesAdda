@@ -4,13 +4,10 @@
     if (typeof NotesAdda === 'undefined') return;
 
     const App = {
+        currentPage: 1,
+
         init: function() {
             if ($('#notes-adda-app').length === 0) return;
-
-            // Init icons
-            if (typeof lucide !== 'undefined') {
-                lucide.createIcons();
-            }
 
             this.bindEvents();
             if (NotesAdda.is_logged_in) {
@@ -29,12 +26,25 @@
                 const view = $(this).data('view');
                 $('.na-view').removeClass('active').hide();
                 $('#na-view-' + view).addClass('active').show();
+                self.currentPage = 1;
                 self.loadNotes(view);
             });
 
             // Filters
             $('#na-apply-filters').on('click', function() {
+                self.currentPage = 1;
                 self.loadNotes('library');
+            });
+
+            // Pagination
+            $(document).on('click', '.na-page-btn', function(e) {
+                e.preventDefault();
+                const page = $(this).data('page');
+                if (page) {
+                    self.currentPage = page;
+                    const view = $('.na-nav-link.active').data('view');
+                    self.loadNotes(view);
+                }
             });
 
             // Modals
@@ -91,12 +101,16 @@
             const self = this;
             const $container = (view === 'my-notes') ? $('#na-my-notes-results') : $('#na-library-results');
             const $loading = (view === 'my-notes') ? $('#na-my-notes-loading') : $('#na-library-loading');
+            const $pagination = (view === 'my-notes') ? $('#na-my-notes-pagination') : $('#na-library-pagination');
             
             $container.empty();
+            if ($pagination.length) $pagination.empty();
             $loading.show();
 
             let data = {
-                action: 'notes_adda_query_notes'
+                action: 'notes_adda_query_notes',
+                page: self.currentPage,
+                per_page: 12
             };
 
             if (view === 'my-notes') {
@@ -118,10 +132,13 @@
                 data: data,
                 success: function(res) {
                     $loading.hide();
-                    if (res.success && res.data.notes) {
-                        self.renderNotes(res.data.notes, $container, view);
+                    if (res.success && res.data.items && res.data.items.length > 0) {
+                        self.renderNotes(res.data.items, $container, view);
+                        if ($pagination.length && res.data.total_pages > 1) {
+                            self.renderPagination(res.data.page, res.data.total_pages, $pagination);
+                        }
                     } else {
-                        $container.html('<p>No notes found.</p>');
+                        $container.html('<div class="na-empty-state"><span class="dashicons dashicons-search" style="font-size:48px; width:48px; height:48px; opacity:0.5;"></span><p>No notes found.</p></div>');
                     }
                 },
                 error: function() {
@@ -131,28 +148,33 @@
             });
         },
 
+        renderPagination: function(current, total, $container) {
+            let html = '<div style="margin-top:20px; display:flex; gap:10px; justify-content:center;">';
+            if (current > 1) {
+                html += `<button class="na-btn na-btn-secondary na-page-btn" data-page="${current - 1}">Previous</button>`;
+            }
+            html += `<span style="display:flex; align-items:center; padding:0 10px;">Page ${current} of ${total}</span>`;
+            if (current < total) {
+                html += `<button class="na-btn na-btn-secondary na-page-btn" data-page="${current + 1}">Next</button>`;
+            }
+            html += '</div>';
+            $container.html(html);
+        },
+
         renderNotes: function(notes, $container, view) {
             const self = this;
-            if (notes.length === 0) {
-                $container.html('<p>No notes found.</p>');
-                return;
-            }
 
             notes.forEach(function(note) {
                 const isOwner = (parseInt(note.owner_id) === parseInt(NotesAdda.user_id));
-                let actionsHtml = `<button class="na-btn-view" title="View"><i data-lucide="eye"></i></button>`;
+                let actionsHtml = `<button class="na-btn-view" title="View"><span class="dashicons dashicons-visibility"></span></button>`;
                 
-                // Likes functionality available for all logged-in
-                actionsHtml += `<button class="na-btn-like" title="Like"><i data-lucide="heart"></i> <span class="like-count">${note.like_count}</span></button>`;
-                actionsHtml += `<button class="na-btn-report" title="Report"><i data-lucide="flag"></i></button>`;
+                actionsHtml += `<button class="na-btn-like" title="Like"><span class="dashicons dashicons-heart"></span> <span class="like-count">${note.like_count}</span></button>`;
+                actionsHtml += `<button class="na-btn-report" title="Report"><span class="dashicons dashicons-flag"></span></button>`;
 
                 if (isOwner) {
-                    actionsHtml += `<button class="na-btn-edit" title="Edit"><i data-lucide="edit-2"></i></button>`;
-                    actionsHtml += `<button class="na-btn-delete" title="Delete"><i data-lucide="trash-2"></i></button>`;
+                    actionsHtml += `<button class="na-btn-edit" title="Edit"><span class="dashicons dashicons-edit"></span></button>`;
+                    actionsHtml += `<button class="na-btn-delete" title="Delete"><span class="dashicons dashicons-trash"></span></button>`;
                 }
-
-                // Check tags if we can, but since query doesn't bring tags we might need to fetch them. For now, empty or fetch per note.
-                // We'll leave tags blank on the card to avoid N+1 requests, or fetch them inside details.
 
                 const html = `
                     <div class="na-card" data-id="${note.id}">
@@ -169,20 +191,14 @@
                 $card.data('note', note);
                 $container.append($card);
                 
-                // Check if user liked it
                 self.checkLikeStatus(note.id, $card.find('.na-btn-like'));
             });
-
-            if (typeof lucide !== 'undefined') {
-                lucide.createIcons();
-            }
         },
 
         checkLikeStatus: function(note_id, $btn) {
             $.get(NotesAdda.ajax_url, {
                 action: 'notes_adda_get_like_status',
-                note_id: note_id,
-                user_id: NotesAdda.user_id
+                note_id: note_id
             }, function(res) {
                 if (res.success && res.data.has_liked) {
                     $btn.addClass('liked');
@@ -202,7 +218,6 @@
                 $('#na-note-file-url').val(noteData.file_url);
                 $('#na-note-is-whole').prop('checked', parseInt(noteData.is_whole_notes) === 1);
                 
-                // Fetch tags for edit
                 $.get(NotesAdda.ajax_url, {
                     action: 'notes_adda_get_note_tags',
                     note_id: noteData.id
@@ -233,7 +248,6 @@
             formData.push({name: 'action', value: action});
             formData.push({name: '_ajax_nonce', value: NotesAdda.nonce});
             
-            // Checkbox value
             if (!$('#na-note-is-whole').is(':checked')) {
                 formData.push({name: 'is_whole_notes', value: '0'});
             }
@@ -245,17 +259,24 @@
                 success: function(res) {
                     if (res.success) {
                         const note_id = res.data.id;
-                        // Save tags
                         const tagsRaw = $('#na-note-tags').val();
                         if (tagsRaw.trim() !== '' || isEdit) {
                             const tagsArr = tagsRaw.split(',').map(t => t.trim()).filter(t => t);
+                            // Tag array format: array of strings is treated as 'other' by the backend.
                             $.post(NotesAdda.ajax_url, {
                                 action: 'notes_adda_set_note_tags',
                                 note_id: note_id,
                                 tags: JSON.stringify(tagsArr),
                                 _ajax_nonce: NotesAdda.nonce
-                            }, function() {
-                                self.finishSave();
+                            }, function(tagRes) {
+                                if (tagRes.success) {
+                                    self.finishSave();
+                                } else {
+                                    $('#na-form-message').html('<p style="color:#f87171;">Note saved, but tag assignment failed: ' + tagRes.data.message + '</p>');
+                                }
+                            }).fail(function(xhr) {
+                                const msg = xhr.responseJSON ? xhr.responseJSON.data.message : 'An error occurred setting tags';
+                                $('#na-form-message').html('<p style="color:#f87171;">Note saved, but tag assignment failed: ' + msg + '</p>');
                             });
                         } else {
                             self.finishSave();
@@ -294,6 +315,10 @@
         },
 
         toggleLike: function(id, isLiked, $btn) {
+            if (!NotesAdda.is_logged_in) {
+                alert('Please sign in to like notes.');
+                return;
+            }
             const action = isLiked ? 'notes_adda_remove_like' : 'notes_adda_add_like';
             $.post(NotesAdda.ajax_url, {
                 action: action,
@@ -314,6 +339,10 @@
         },
 
         reportNote: function(id, reason) {
+            if (!NotesAdda.is_logged_in) {
+                alert('Please sign in to report notes.');
+                return;
+            }
             $.post(NotesAdda.ajax_url, {
                 action: 'notes_adda_create_report',
                 note_id: id,
@@ -330,11 +359,9 @@
 
         openDetailsModal: function(note) {
             const self = this;
-            $('#na-note-details-body').html('<div class="na-loading"><i data-lucide="loader" class="na-spin"></i> Loading...</div>');
+            $('#na-note-details-body').html('<div class="na-loading"><span class="dashicons dashicons-update na-spin"></span> Loading...</div>');
             $('#na-note-details-modal').addClass('open');
-            if (typeof lucide !== 'undefined') lucide.createIcons();
 
-            // Fetch tags
             $.get(NotesAdda.ajax_url, {
                 action: 'notes_adda_get_note_tags',
                 note_id: note.id
@@ -353,12 +380,11 @@
                     <div style="margin:20px 0; white-space:pre-wrap; color:var(--na-text-main);">${self.escapeHtml(note.description || '')}</div>
                     <div style="margin-top:20px;">
                         <a href="${self.escapeHtml(note.file_url)}" target="_blank" class="na-btn na-btn-primary">
-                            <i data-lucide="external-link"></i> Open File
+                            <span class="dashicons dashicons-external"></span> Open File
                         </a>
                     </div>
                 `;
                 $('#na-note-details-body').html(html);
-                if (typeof lucide !== 'undefined') lucide.createIcons();
             });
         },
 

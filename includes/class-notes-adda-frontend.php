@@ -46,14 +46,8 @@ class Notes_Adda_Frontend {
 				)
 			);
             
-            // Enqueue Lucide icons
-            wp_enqueue_script(
-                'lucide-icons',
-                'https://unpkg.com/lucide@latest',
-                array(),
-                null,
-                true
-            );
+            // Enqueue Dashicons
+            wp_enqueue_style( 'dashicons' );
 		}
 	}
 

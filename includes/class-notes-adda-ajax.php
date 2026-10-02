@@ -251,7 +251,7 @@ class Notes_Adda_Ajax {
 	 */
 	public static function get_like_status() {
 		$note_id = isset( $_REQUEST['note_id'] ) ? (int) $_REQUEST['note_id'] : 0;
-		$user_id = isset( $_REQUEST['user_id'] ) ? (int) $_REQUEST['user_id'] : 0;
+		$user_id = is_user_logged_in() ? get_current_user_id() : 0;
 
 		if ( $note_id <= 0 ) {
 			self::send_error( new WP_Error( 'notes_adda_invalid_note_id', 'Please provide a valid note ID.' ) );

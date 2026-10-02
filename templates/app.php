@@ -1,7 +1,7 @@
 <div id="notes-adda-app" class="notes-adda-app-container na-theme-dark">
     <?php if ( ! is_user_logged_in() ) : ?>
         <div class="na-logged-out-state">
-            <i data-lucide="lock" class="na-icon-large"></i>
+            <span class="dashicons dashicons-lock na-icon-large"></span>
             <h2>Welcome to Notes Adda</h2>
             <p>Please sign in to access the notes library and manage your notes.</p>
             <a href="<?php echo esc_url( wp_login_url( get_permalink() ) ); ?>" class="na-btn na-btn-primary">Sign In to Continue</a>
@@ -11,12 +11,12 @@
             <!-- Sidebar / Nav -->
             <nav class="na-sidebar">
                 <div class="na-brand">
-                    <i data-lucide="book-open"></i> Notes Adda
+                    <span class="dashicons dashicons-book"></span> Notes Adda
                 </div>
                 <ul class="na-nav-menu">
-                    <li><a href="#" class="na-nav-link active" data-view="library"><i data-lucide="library"></i> Central Library</a></li>
-                    <li><a href="#" class="na-nav-link" data-view="my-notes"><i data-lucide="folder"></i> My Notes</a></li>
-                    <li><a href="#" class="na-btn na-btn-primary na-btn-full" id="na-new-note-btn"><i data-lucide="plus"></i> New Note</a></li>
+                    <li><a href="#" class="na-nav-link active" data-view="library"><span class="dashicons dashicons-portfolio"></span> Central Library</a></li>
+                    <li><a href="#" class="na-nav-link" data-view="my-notes"><span class="dashicons dashicons-category"></span> My Notes</a></li>
+                    <li><a href="#" class="na-btn na-btn-primary na-btn-full" id="na-new-note-btn"><span class="dashicons dashicons-plus"></span> New Note</a></li>
                 </ul>
             </nav>
 
@@ -43,7 +43,7 @@
                         <button id="na-apply-filters" class="na-btn na-btn-secondary">Apply Filters</button>
                     </div>
                     
-                    <div id="na-library-loading" class="na-loading" style="display:none;"><i data-lucide="loader" class="na-spin"></i> Loading...</div>
+                    <div id="na-library-loading" class="na-loading" style="display:none;"><span class="dashicons dashicons-update na-spin"></span> Loading...</div>
                     <div id="na-library-results" class="na-grid"></div>
                     <div id="na-library-pagination" class="na-pagination"></div>
                 </section>
@@ -53,8 +53,9 @@
                     <header class="na-view-header">
                         <h2>My Notes</h2>
                     </header>
-                    <div id="na-my-notes-loading" class="na-loading" style="display:none;"><i data-lucide="loader" class="na-spin"></i> Loading...</div>
+                    <div id="na-my-notes-loading" class="na-loading" style="display:none;"><span class="dashicons dashicons-update na-spin"></span> Loading...</div>
                     <div id="na-my-notes-results" class="na-grid"></div>
+                    <div id="na-my-notes-pagination" class="na-pagination"></div>
                 </section>
             </main>
         </div>
