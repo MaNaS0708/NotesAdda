@@ -14,7 +14,8 @@ class Notes_Adda_Uploads {
 	 */
 	public static function upload_note_file( $user_id, $file ) {
 		$user_id = (int) $user_id;
-		if ( $user_id <= 0 ) {
+		$user    = get_userdata( $user_id );
+		if ( ! $user ) {
 			return new WP_Error( 'notes_adda_invalid_user', 'Invalid user ID.' );
 		}
 
@@ -40,6 +41,15 @@ class Notes_Adda_Uploads {
 
 		if ( 'pdf' !== $ext || 'application/pdf' !== $type ) {
 			return new WP_Error( 'notes_adda_invalid_type', 'Only PDF files are allowed.' );
+		}
+
+		if ( function_exists( 'finfo_file' ) ) {
+			$finfo     = finfo_open( FILEINFO_MIME_TYPE );
+			$real_mime = finfo_file( $finfo, $file['tmp_name'] );
+			finfo_close( $finfo );
+			if ( 'application/pdf' !== $real_mime ) {
+				return new WP_Error( 'notes_adda_invalid_type', 'File content is not a valid PDF.' );
+			}
 		}
 
 		// Use WordPress functions to handle the upload
@@ -71,6 +81,7 @@ class Notes_Adda_Uploads {
 			$attach_id = wp_insert_attachment( $attachment, $filename );
 
 			if ( is_wp_error( $attach_id ) ) {
+				@unlink( $filename );
 				return new WP_Error( 'notes_adda_attachment_failed', 'Failed to create attachment in Media Library.' );
 			}
 
