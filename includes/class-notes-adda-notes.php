@@ -279,6 +279,7 @@ class Notes_Adda_Notes {
 
 		$table_notes = $wpdb->prefix . 'notes_adda_notes';
 		$table_tags  = $wpdb->prefix . 'notes_adda_note_tags';
+		$table_likes = $wpdb->prefix . 'notes_adda_likes';
 
 		$wpdb->query( 'START TRANSACTION' );
 
@@ -292,6 +293,18 @@ class Notes_Adda_Notes {
 		if ( false === $deleted_tags ) {
 			$wpdb->query( 'ROLLBACK' );
 			return new WP_Error( 'notes_adda_note_delete_failed', 'Failed to delete note tags from database.' );
+		}
+
+		// Delete from likes
+		$deleted_likes = $wpdb->delete(
+			$table_likes,
+			array( 'note_id' => $note_id ),
+			array( '%d' )
+		);
+
+		if ( false === $deleted_likes ) {
+			$wpdb->query( 'ROLLBACK' );
+			return new WP_Error( 'notes_adda_note_delete_failed', 'Failed to delete note likes from database.' );
 		}
 
 		// Delete from notes
