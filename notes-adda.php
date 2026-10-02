@@ -21,5 +21,5 @@ require_once NOTES_ADDA_PATH . 'includes/class-notes-adda-user-profile.php';
 require_once NOTES_ADDA_PATH . 'includes/class-notes-adda-notes.php';
 require_once NOTES_ADDA_PATH . 'includes/class-notes-adda-note-tags.php';
 require_once NOTES_ADDA_PATH . 'includes/class-notes-adda-note-query.php';
-
+require_once NOTES_ADDA_PATH . 'includes/class-notes-adda-likes.php';
 register_activation_hook( __FILE__, array( 'Notes_Adda_Activator', 'activate' ) );
