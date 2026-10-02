@@ -307,6 +307,19 @@ class Notes_Adda_Notes {
 			return new WP_Error( 'notes_adda_note_delete_failed', 'Failed to delete note likes from database.' );
 		}
 
+		$table_reports = $wpdb->prefix . 'notes_adda_reports';
+		// Delete from reports
+		$deleted_reports = $wpdb->delete(
+			$table_reports,
+			array( 'note_id' => $note_id ),
+			array( '%d' )
+		);
+
+		if ( false === $deleted_reports ) {
+			$wpdb->query( 'ROLLBACK' );
+			return new WP_Error( 'notes_adda_note_delete_failed', 'Failed to delete note reports from database.' );
+		}
+
 		// Delete from notes
 		$deleted_note = $wpdb->delete(
 			$table_notes,
