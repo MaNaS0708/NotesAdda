@@ -14,7 +14,7 @@ class Notes_Adda_Frontend {
 	public static function load_custom_template( $template ) {
 		global $post;
 		if ( is_a( $post, 'WP_Post' ) && has_shortcode( $post->post_content, 'notes_adda_app' ) ) {
-			return NOTES_ADDA_PATH . 'templates/page-app.php';
+			return NOTES_ADDA_PATH . 'ui/html/page-app.php';
 		}
 		return $template;
 	}
@@ -27,14 +27,14 @@ class Notes_Adda_Frontend {
 			show_admin_bar( false );
 			wp_enqueue_style(
 				'notes-adda-app-style',
-				NOTES_ADDA_URL . 'assets/css/notes-adda-app.css',
+				NOTES_ADDA_URL . 'ui/css/notes-adda-app.css',
 				array(),
 				NOTES_ADDA_VERSION
 			);
 
 			wp_enqueue_script(
 				'notes-adda-app-script',
-				NOTES_ADDA_URL . 'assets/js/notes-adda-app.js',
+				NOTES_ADDA_URL . 'ui/js/notes-adda-app.js',
 				array( 'jquery' ),
 				NOTES_ADDA_VERSION,
 				true
@@ -63,7 +63,7 @@ class Notes_Adda_Frontend {
 
 	public static function render_app( $atts ) {
 		ob_start();
-		include NOTES_ADDA_PATH . 'templates/app.php';
+		include NOTES_ADDA_PATH . 'ui/html/app.php';
 		return ob_get_clean();
 	}
 }

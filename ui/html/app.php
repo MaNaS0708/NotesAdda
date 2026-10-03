@@ -1,4 +1,4 @@
-<div id="notes-adda-app" class="notes-adda-app-container na-theme-dark">
+<div id="notes-adda-app" class="notes-adda-app-container">
     <?php if ( ! is_user_logged_in() ) : ?>
         <div class="na-auth-container">
             <div class="na-auth-card">
@@ -86,8 +86,11 @@
             <aside class="na-sidebar">
                 <div class="na-sidebar-header">
                     <div class="na-sidebar-brand">
-                        <div class="na-brand-badge"><span class="dashicons dashicons-book-alt"></span></div>
-                        <span class="na-brand-name">Notes Adda</span>
+                        <div class="na-brand-badge"><span class="dashicons dashicons-welcome-learn-more"></span></div>
+                        <div>
+                            <span class="na-brand-name">Notes Adda</span>
+                            <span class="na-brand-caption">Study library</span>
+                        </div>
                     </div>
                 </div>
                 
@@ -113,8 +116,8 @@
                     <ul class="na-nav-list">
                         <li>
                             <a href="#library" class="na-nav-item active" data-view="library">
-                                <span class="dashicons dashicons-portfolio"></span>
-                                <span class="na-nav-text">Central Library</span>
+                                <span class="dashicons dashicons-books"></span>
+                                <span class="na-nav-text">Browse library</span>
                             </a>
                         </li>
                         <li>
@@ -139,7 +142,7 @@
                 <!-- Mobile Top Bar -->
                 <header class="na-mobile-header">
                     <div class="na-sidebar-brand">
-                        <div class="na-brand-badge"><span class="dashicons dashicons-book-alt"></span></div>
+                        <div class="na-brand-badge"><span class="dashicons dashicons-welcome-learn-more"></span></div>
                         <span class="na-brand-name">Notes Adda</span>
                     </div>
                     <button type="button" class="na-btn na-btn-primary na-btn-sm" id="na-mobile-new-note-btn">
@@ -151,16 +154,20 @@
                 <section id="na-view-library" class="na-view active">
                     <div class="na-view-header">
                         <div>
-                            <h2 class="na-view-title">Central Library</h2>
-                            <p class="na-view-subtitle">Explore notes uploaded by students and educators</p>
+                            <span class="na-eyebrow">Community knowledge base</span>
+                            <h2 class="na-view-title">Your study library, in one place.</h2>
+                            <p class="na-view-subtitle">Search reliable notes, study guides, and complete course material shared by your community.</p>
                         </div>
+                        <button type="button" class="na-btn na-btn-primary na-open-create-btn">
+                            <span class="dashicons dashicons-upload"></span> Share notes
+                        </button>
                     </div>
 
                     <!-- Toolbar / Filters -->
                     <div class="na-toolbar">
                         <div class="na-search-box">
                             <span class="dashicons dashicons-search na-search-icon"></span>
-                            <input type="text" id="na-search-input" placeholder="Search notes by title or description..." class="na-input">
+                            <input type="search" id="na-search-input" placeholder="Search by subject, topic, or title" class="na-input" aria-label="Search notes">
                         </div>
                         <div class="na-filters-row">
                             <select id="na-subject-filter" class="na-select">
@@ -181,13 +188,18 @@
                                 <option value="popular">Sort: Most Liked</option>
                             </select>
                             <button type="button" id="na-apply-filters" class="na-btn na-btn-secondary">
-                                <span class="dashicons dashicons-filter"></span>
-                                <span>Filter</span>
+                                <span class="dashicons dashicons-search"></span>
+                                <span>Search</span>
                             </button>
                             <button type="button" id="na-reset-filters" class="na-btn na-btn-ghost" style="display:none;">
                                 <span>Reset</span>
                             </button>
                         </div>
+                    </div>
+
+                    <div class="na-results-meta">
+                        <span id="na-library-result-count">Explore recently shared notes</span>
+                        <span class="na-results-meta-hint">Upload yours to help another student.</span>
                     </div>
 
                     <!-- Loading State -->
@@ -217,12 +229,18 @@
                 <section id="na-view-my-notes" class="na-view" style="display:none;">
                     <div class="na-view-header">
                         <div>
+                            <span class="na-eyebrow">Your contribution</span>
                             <h2 class="na-view-title">My Notes</h2>
-                            <p class="na-view-subtitle">Manage, edit, and track notes you have published</p>
+                            <p class="na-view-subtitle">Manage the material you have shared with the student community.</p>
                         </div>
                         <button type="button" class="na-btn na-btn-primary na-open-create-btn">
                             <span class="dashicons dashicons-plus"></span> Upload Note
                         </button>
+                    </div>
+
+                    <div class="na-results-meta na-results-meta-my">
+                        <span id="na-my-notes-result-count">Your published material</span>
+                        <span class="na-results-meta-hint">Keep titles and descriptions clear so students can find them.</span>
                     </div>
 
                     <!-- Loading State -->

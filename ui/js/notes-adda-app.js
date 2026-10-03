@@ -275,6 +275,7 @@
             $empty.hide();
             $pagination.empty();
             $loading.show();
+            this.setResultSummary(view, null);
 
             const queryData = {
                 action: 'notes_adda_query_notes',
@@ -306,18 +307,36 @@
                     $loading.hide();
                     if (res.success && res.data && res.data.items && res.data.items.length > 0) {
                         self.renderNotes(res.data.items, $container, view);
+                        self.setResultSummary(view, res.data.total);
                         if (res.data.total_pages > 1) {
                             self.renderPagination(res.data.page, res.data.total_pages, $pagination);
                         }
                     } else {
+                        self.setResultSummary(view, 0);
                         $empty.show();
                     }
                 },
                 error: function() {
                     $loading.hide();
+                    self.setResultSummary(view, 'error');
                     $container.html('<div class="na-state-box"><p style="color:var(--na-danger);">Failed to load notes. Please try again.</p></div>');
                 }
             });
+        },
+
+        setResultSummary: function(view, total) {
+            const $summary = view === 'my-notes' ? $('#na-my-notes-result-count') : $('#na-library-result-count');
+            if (!$summary.length) return;
+
+            if (total === null) {
+                $summary.text('Loading study material...');
+            } else if (total === 'error') {
+                $summary.text('Unable to load notes right now');
+            } else if (view === 'my-notes') {
+                $summary.text(total === 1 ? '1 note published by you' : total + ' notes published by you');
+            } else {
+                $summary.text(total === 1 ? '1 note found' : total + ' notes found');
+            }
         },
 
         renderPagination: function(current, total, $container) {
@@ -339,7 +358,7 @@
                 const isOwner = (parseInt(note.owner_id) === parseInt(NotesAdda.user_id));
 
                 const html = `
-                    <div class="na-card" data-id="${note.id}">
+                    <article class="na-card" data-id="${note.id}">
                         <div class="na-card-top">
                             <div class="na-badge-group">
                                 <span class="na-badge na-badge-subject">${self.escapeHtml(note.subject || 'General')}</span>
@@ -356,14 +375,14 @@
                                 ${self.formatDate(note.created_at)}
                             </span>
                             <div class="na-card-actions">
-                                <button type="button" class="na-icon-btn na-btn-view" title="Preview Note">
+                                <button type="button" class="na-icon-btn na-btn-view" title="Preview note" aria-label="Preview ${self.escapeHtml(note.title)}">
                                     <span class="dashicons dashicons-visibility"></span>
                                 </button>
                                 ${note.file_url ? `
-                                <a href="${self.escapeHtml(note.file_url)}" target="_blank" class="na-icon-btn" title="Open PDF">
+                                <a href="${self.escapeHtml(note.file_url)}" target="_blank" rel="noopener noreferrer" class="na-icon-btn" title="Open PDF" aria-label="Open PDF for ${self.escapeHtml(note.title)}">
                                     <span class="dashicons dashicons-pdf"></span>
                                 </a>` : ''}
-                                <button type="button" class="na-icon-btn na-btn-like" title="Like Note">
+                                <button type="button" class="na-icon-btn na-btn-like" title="Like note" aria-label="Like ${self.escapeHtml(note.title)}">
                                     <span class="dashicons dashicons-heart"></span>
                                     <span class="like-count">${note.like_count || 0}</span>
                                 </button>
@@ -379,7 +398,7 @@
                                 </button>`}
                             </div>
                         </div>
-                    </div>
+                    </article>
                 `;
 
                 const $card = $(html);

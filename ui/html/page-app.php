@@ -15,7 +15,7 @@ if ( ! defined( 'ABSPATH' ) ) {
             margin: 0;
             padding: 0;
             overflow-x: hidden;
-            background: #1e1e24; /* Fallback dark background */
+            background: #fcfaf8;
         }
         #wpadminbar { display: none !important; }
         html { margin-top: 0 !important; }
