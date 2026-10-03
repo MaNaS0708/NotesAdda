@@ -8,6 +8,15 @@ class Notes_Adda_Frontend {
 	public static function init() {
 		add_shortcode( 'notes_adda_app', array( __CLASS__, 'render_app' ) );
 		add_action( 'wp_enqueue_scripts', array( __CLASS__, 'enqueue_scripts' ) );
+		add_filter( 'template_include', array( __CLASS__, 'load_custom_template' ) );
+	}
+
+	public static function load_custom_template( $template ) {
+		global $post;
+		if ( is_a( $post, 'WP_Post' ) && has_shortcode( $post->post_content, 'notes_adda_app' ) ) {
+			return NOTES_ADDA_PATH . 'templates/page-app.php';
+		}
+		return $template;
 	}
 
 	public static function enqueue_scripts() {
