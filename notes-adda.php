@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Notes Adda
  * Description: Student notes sharing application.
- * Version: 0.1.1
+ * Version: 0.1.2
  * Author: Manas
  * Text Domain: notes-adda
  */
@@ -11,7 +11,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'NOTES_ADDA_VERSION', '0.1.1' );
+define( 'NOTES_ADDA_VERSION', '0.1.2' );
 define( 'NOTES_ADDA_PATH', plugin_dir_path( __FILE__ ) );
 define( 'NOTES_ADDA_URL', plugin_dir_url( __FILE__ ) );
 
