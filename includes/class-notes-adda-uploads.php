@@ -19,19 +19,29 @@ class Notes_Adda_Uploads {
 			return new WP_Error( 'notes_adda_invalid_user', 'Invalid user ID.' );
 		}
 
-		if ( empty( $file ) || ! isset( $file['tmp_name'] ) || empty( $file['tmp_name'] ) ) {
+		if ( empty( $file ) ) {
 			return new WP_Error( 'notes_adda_no_file', 'No file was provided.' );
 		}
 
 		// Check for PHP upload errors
 		if ( isset( $file['error'] ) && $file['error'] !== UPLOAD_ERR_OK ) {
+			if ( $file['error'] === UPLOAD_ERR_INI_SIZE || $file['error'] === UPLOAD_ERR_FORM_SIZE ) {
+				return new WP_Error( 'notes_adda_file_too_large', 'File exceeds the maximum allowed size of 50 MB.' );
+			}
+			if ( $file['error'] === UPLOAD_ERR_NO_FILE ) {
+				return new WP_Error( 'notes_adda_no_file', 'No file was provided.' );
+			}
 			return new WP_Error( 'notes_adda_upload_error', 'PHP Upload Error: ' . $file['error'] );
 		}
 
-		// Maximum allowed size: 25 MB
-		$max_size = 25 * 1024 * 1024;
+		if ( ! isset( $file['tmp_name'] ) || empty( $file['tmp_name'] ) ) {
+			return new WP_Error( 'notes_adda_no_file', 'No file was provided.' );
+		}
+
+		// Maximum allowed size: 50 MB
+		$max_size = 50 * 1024 * 1024;
 		if ( $file['size'] > $max_size ) {
-			return new WP_Error( 'notes_adda_file_too_large', 'File exceeds the maximum allowed size of 25 MB.' );
+			return new WP_Error( 'notes_adda_file_too_large', 'File exceeds the maximum allowed size of 50 MB.' );
 		}
 
 		// Validate extension and MIME type
