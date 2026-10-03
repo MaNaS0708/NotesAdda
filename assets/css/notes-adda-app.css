@@ -364,3 +364,20 @@
         flex-direction: column;
     }
 }
+
+/* Auth Styles */
+.na-auth-container { max-width: 400px; margin: 50px auto; padding: 30px; background: var(--na-bg-surface); border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.3); text-align: center; }
+.na-auth-container .na-brand-logo { margin-bottom: 20px; color: var(--na-primary-color); }
+.na-auth-container .na-brand-logo .dashicons { font-size: 48px; width: 48px; height: 48px; }
+.na-auth-container h2 { margin-bottom: 25px; font-size: 1.5rem; }
+.na-auth-switch { margin-top: 20px; font-size: 0.9rem; color: var(--na-text-muted); }
+.na-auth-switch a { color: var(--na-primary-color); text-decoration: none; }
+.na-auth-switch a:hover { text-decoration: underline; }
+.na-auth-message { margin-top: 15px; font-size: 0.9rem; }
+.na-auth-message.error { color: var(--na-error-color); }
+.na-auth-message.success { color: var(--na-success-color); }
+.na-user-summary { display: flex; align-items: center; padding: 15px 20px; margin-bottom: 20px; border-bottom: 1px solid var(--na-border-color); }
+.na-user-avatar img { border-radius: 50%; margin-right: 15px; }
+.na-user-info { display: flex; flex-direction: column; }
+.na-user-info strong { font-size: 1rem; color: var(--na-text-color); }
+.na-user-info span { font-size: 0.8rem; color: var(--na-text-muted); }

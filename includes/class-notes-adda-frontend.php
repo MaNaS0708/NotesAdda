@@ -15,6 +15,7 @@ class Notes_Adda_Frontend {
 
 		// Only enqueue if the shortcode is present
 		if ( is_a( $post, 'WP_Post' ) && has_shortcode( $post->post_content, 'notes_adda_app' ) ) {
+			show_admin_bar( false );
 			wp_enqueue_style(
 				'notes-adda-app-style',
 				NOTES_ADDA_URL . 'assets/css/notes-adda-app.css',
@@ -39,7 +40,7 @@ class Notes_Adda_Frontend {
 				'NotesAdda',
 				array(
 					'ajax_url'     => admin_url( 'admin-ajax.php' ),
-					'nonce'        => $is_logged_in ? wp_create_nonce( 'notes_adda_ajax_nonce' ) : '',
+					'nonce'        => wp_create_nonce( 'notes_adda_ajax_nonce' ),
 					'is_logged_in' => $is_logged_in,
 					'user_id'      => $is_logged_in ? $current_user->ID : 0,
 					'login_url'    => wp_login_url( get_permalink() ),

@@ -18,6 +18,56 @@
         bindEvents: function() {
             const self = this;
 
+            // Auth Switch
+            $('[data-switch]').on('click', function(e) {
+                e.preventDefault();
+                $('.na-auth-view').removeClass('active').hide();
+                $('#na-' + $(this).data('switch') + '-view').addClass('active').show();
+                $('.na-auth-message').text('').removeClass('error success');
+            });
+
+            // Login
+            $('#na-login-form').on('submit', function(e) {
+                e.preventDefault();
+                const $form = $(this);
+                const $msg = $form.find('.na-auth-message');
+                const data = $form.serialize() + '&action=notes_adda_login&_ajax_nonce=' + NotesAdda.nonce;
+                $msg.text('Logging in...').removeClass('error success');
+                $.post(NotesAdda.ajax_url, data, function(res) {
+                    if (res.success) {
+                        $msg.text(res.data.message).addClass('success');
+                        window.location.reload();
+                    } else {
+                        $msg.text(res.data.message).addClass('error');
+                    }
+                });
+            });
+
+            // Register
+            $('#na-register-form').on('submit', function(e) {
+                e.preventDefault();
+                const $form = $(this);
+                const $msg = $form.find('.na-auth-message');
+                const data = $form.serialize() + '&action=notes_adda_register&_ajax_nonce=' + NotesAdda.nonce;
+                $msg.text('Creating account...').removeClass('error success');
+                $.post(NotesAdda.ajax_url, data, function(res) {
+                    if (res.success) {
+                        $msg.text(res.data.message).addClass('success');
+                        window.location.reload();
+                    } else {
+                        $msg.text(res.data.message).addClass('error');
+                    }
+                });
+            });
+
+            // Logout
+            $('#na-logout-btn').on('click', function(e) {
+                e.preventDefault();
+                $.post(NotesAdda.ajax_url, { action: 'notes_adda_logout', _ajax_nonce: NotesAdda.nonce }, function(res) {
+                    if (res.success) window.location.reload();
+                });
+            });
+
             // Navigation
             $('.na-nav-link').on('click', function(e) {
                 e.preventDefault();
@@ -260,8 +310,8 @@
                     $('#na-form-message').html('<p style="color:#f87171;">Only PDF files are allowed.</p>');
                     return;
                 }
-                if (file.size > 25 * 1024 * 1024) {
-                    $('#na-form-message').html('<p style="color:#f87171;">File exceeds 25 MB limit.</p>');
+                if (file.size > 50 * 1024 * 1024) {
+                    $('#na-form-message').html('<p style="color:#f87171;">File exceeds 50 MB limit.</p>');
                     return;
                 }
 

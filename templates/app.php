@@ -1,22 +1,83 @@
 <div id="notes-adda-app" class="notes-adda-app-container na-theme-dark">
     <?php if ( ! is_user_logged_in() ) : ?>
-        <div class="na-logged-out-state">
-            <span class="dashicons dashicons-lock na-icon-large"></span>
-            <h2>Welcome to Notes Adda</h2>
-            <p>Please sign in to access the notes library and manage your notes.</p>
-            <a href="<?php echo esc_url( wp_login_url( get_permalink() ) ); ?>" class="na-btn na-btn-primary">Sign In to Continue</a>
+        <div class="na-auth-container">
+            <div id="na-login-view" class="na-auth-view active">
+                <div class="na-brand-logo"><span class="dashicons dashicons-book"></span></div>
+                <h2>Sign In to Notes Adda</h2>
+                <form id="na-login-form">
+                    <div class="na-form-group">
+                        <label>Username or Email</label>
+                        <input type="text" name="username" class="na-input" required>
+                    </div>
+                    <div class="na-form-group">
+                        <label>Password</label>
+                        <input type="password" name="password" class="na-input" required>
+                    </div>
+                    <button type="submit" class="na-btn na-btn-primary na-btn-full">Sign In</button>
+                    <div class="na-auth-message"></div>
+                </form>
+                <p class="na-auth-switch">Don't have an account? <a href="#" data-switch="register">Create one</a></p>
+            </div>
+            
+            <div id="na-register-view" class="na-auth-view" style="display:none;">
+                <div class="na-brand-logo"><span class="dashicons dashicons-book"></span></div>
+                <h2>Create Account</h2>
+                <form id="na-register-form">
+                    <div class="na-form-group">
+                        <label>Username</label>
+                        <input type="text" name="username" class="na-input" required>
+                    </div>
+                    <div class="na-form-group">
+                        <label>Email</label>
+                        <input type="email" name="email" class="na-input" required>
+                    </div>
+                    <div class="na-form-group">
+                        <label>College</label>
+                        <input type="text" name="college" class="na-input" required>
+                    </div>
+                    <div class="na-form-group">
+                        <label>Bio (Optional)</label>
+                        <textarea name="bio" class="na-input"></textarea>
+                    </div>
+                    <div class="na-form-group">
+                        <label>Password</label>
+                        <input type="password" name="password" class="na-input" required>
+                    </div>
+                    <div class="na-form-group">
+                        <label>Confirm Password</label>
+                        <input type="password" name="confirm_password" class="na-input" required>
+                    </div>
+                    <button type="submit" class="na-btn na-btn-primary na-btn-full">Sign Up</button>
+                    <div class="na-auth-message"></div>
+                </form>
+                <p class="na-auth-switch">Already have an account? <a href="#" data-switch="login">Sign in</a></p>
+            </div>
         </div>
-    <?php else : ?>
+    <?php else : 
+        $current_user = wp_get_current_user();
+    ?>
         <div class="na-app-layout">
             <!-- Sidebar / Nav -->
             <nav class="na-sidebar">
                 <div class="na-brand">
                     <span class="dashicons dashicons-book"></span> Notes Adda
                 </div>
+                
+                <div class="na-user-summary">
+                    <div class="na-user-avatar">
+                        <?php echo get_avatar($current_user->ID, 40); ?>
+                    </div>
+                    <div class="na-user-info">
+                        <strong><?php echo esc_html($current_user->display_name); ?></strong>
+                        <span>@<?php echo esc_html($current_user->user_login); ?></span>
+                    </div>
+                </div>
+
                 <ul class="na-nav-menu">
                     <li><a href="#" class="na-nav-link active" data-view="library"><span class="dashicons dashicons-portfolio"></span> Central Library</a></li>
                     <li><a href="#" class="na-nav-link" data-view="my-notes"><span class="dashicons dashicons-category"></span> My Notes</a></li>
                     <li><a href="#" class="na-btn na-btn-primary na-btn-full" id="na-new-note-btn"><span class="dashicons dashicons-plus"></span> New Note</a></li>
+                    <li class="na-nav-bottom" style="margin-top:auto;"><a href="#" id="na-logout-btn" class="na-nav-link"><span class="dashicons dashicons-migrate"></span> Log Out</a></li>
                 </ul>
             </nav>
 
@@ -44,6 +105,10 @@
                     </div>
                     
                     <div id="na-library-loading" class="na-loading" style="display:none;"><span class="dashicons dashicons-update na-spin"></span> Loading...</div>
+                    <div id="na-library-empty" class="na-empty-state" style="display:none; text-align:center; padding: 40px; color: var(--na-text-muted);">
+                        <span class="dashicons dashicons-search" style="font-size:40px; width:40px; height:40px; margin-bottom:10px;"></span>
+                        <p>The library is currently empty. Be the first to upload a note!</p>
+                    </div>
                     <div id="na-library-results" class="na-grid"></div>
                     <div id="na-library-pagination" class="na-pagination"></div>
                 </section>
@@ -54,6 +119,9 @@
                         <h2>My Notes</h2>
                     </header>
                     <div id="na-my-notes-loading" class="na-loading" style="display:none;"><span class="dashicons dashicons-update na-spin"></span> Loading...</div>
+                    <div id="na-my-notes-empty" class="na-empty-state" style="display:none; text-align:center; padding: 40px; color: var(--na-text-muted);">
+                        <p>You haven't uploaded any notes yet.</p>
+                    </div>
                     <div id="na-my-notes-results" class="na-grid"></div>
                     <div id="na-my-notes-pagination" class="na-pagination"></div>
                 </section>
