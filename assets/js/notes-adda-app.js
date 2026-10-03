@@ -1,61 +1,117 @@
+/**
+ * Notes Adda - Core Frontend Application Script
+ * Powered by jQuery & WordPress REST/AJAX
+ */
 (function($) {
     'use strict';
 
-    if (typeof NotesAdda === 'undefined') return;
+    if (typeof NotesAdda === 'undefined') {
+        return;
+    }
 
     const App = {
         currentPage: 1,
+        activeView: 'library',
 
         init: function() {
             if ($('#notes-adda-app').length === 0) return;
 
             this.bindEvents();
+            
             if (NotesAdda.is_logged_in) {
-                this.loadNotes('library');
+                this.loadNotes(this.activeView);
             }
         },
 
         bindEvents: function() {
             const self = this;
 
-            // Auth Switch
+            // Auth View Tab Switching
             $('[data-switch]').on('click', function(e) {
                 e.preventDefault();
+                const target = $(this).data('switch');
+                $('.na-auth-tab').removeClass('active');
+                $(`.na-auth-tab[data-switch="${target}"]`).addClass('active');
+                
                 $('.na-auth-view').removeClass('active').hide();
-                $('#na-' + $(this).data('switch') + '-view').addClass('active').show();
+                $('#na-' + target + '-view').addClass('active').show();
                 $('.na-auth-message').text('').removeClass('error success');
             });
 
-            // Login
+            // Login Form
             $('#na-login-form').on('submit', function(e) {
                 e.preventDefault();
                 const $form = $(this);
+                const $btn = $form.find('button[type="submit"]');
                 const $msg = $form.find('.na-auth-message');
-                const data = $form.serialize() + '&action=notes_adda_login&_ajax_nonce=' + NotesAdda.nonce;
-                $msg.text('Logging in...').removeClass('error success');
-                $.post(NotesAdda.ajax_url, data, function(res) {
-                    if (res.success) {
-                        $msg.text(res.data.message).addClass('success');
-                        window.location.reload();
-                    } else {
-                        $msg.text(res.data.message).addClass('error');
+                
+                $btn.prop('disabled', true);
+                $btn.find('.na-btn-text').text('Signing in...');
+                $btn.find('.na-btn-spinner').show();
+                $msg.text('').removeClass('error success');
+
+                const postData = $form.serialize() + '&action=notes_adda_login&_ajax_nonce=' + NotesAdda.nonce;
+
+                $.ajax({
+                    url: NotesAdda.ajax_url,
+                    type: 'POST',
+                    data: postData,
+                    success: function(res) {
+                        if (res.success) {
+                            $msg.text('Signed in successfully! Loading your dashboard...').addClass('success');
+                            window.location.reload();
+                        } else {
+                            $btn.prop('disabled', false);
+                            $btn.find('.na-btn-text').text('Sign In');
+                            $btn.find('.na-btn-spinner').hide();
+                            $msg.text(res.data && res.data.message ? res.data.message : 'Invalid credentials.').addClass('error');
+                        }
+                    },
+                    error: function(xhr) {
+                        $btn.prop('disabled', false);
+                        $btn.find('.na-btn-text').text('Sign In');
+                        $btn.find('.na-btn-spinner').hide();
+                        const err = xhr.responseJSON && xhr.responseJSON.data ? xhr.responseJSON.data.message : 'An error occurred during sign in.';
+                        $msg.text(err).addClass('error');
                     }
                 });
             });
 
-            // Register
+            // Register Form
             $('#na-register-form').on('submit', function(e) {
                 e.preventDefault();
                 const $form = $(this);
+                const $btn = $form.find('button[type="submit"]');
                 const $msg = $form.find('.na-auth-message');
-                const data = $form.serialize() + '&action=notes_adda_register&_ajax_nonce=' + NotesAdda.nonce;
-                $msg.text('Creating account...').removeClass('error success');
-                $.post(NotesAdda.ajax_url, data, function(res) {
-                    if (res.success) {
-                        $msg.text(res.data.message).addClass('success');
-                        window.location.reload();
-                    } else {
-                        $msg.text(res.data.message).addClass('error');
+
+                $btn.prop('disabled', true);
+                $btn.find('.na-btn-text').text('Creating Account...');
+                $btn.find('.na-btn-spinner').show();
+                $msg.text('').removeClass('error success');
+
+                const postData = $form.serialize() + '&action=notes_adda_register&_ajax_nonce=' + NotesAdda.nonce;
+
+                $.ajax({
+                    url: NotesAdda.ajax_url,
+                    type: 'POST',
+                    data: postData,
+                    success: function(res) {
+                        if (res.success) {
+                            $msg.text('Account created! Entering workspace...').addClass('success');
+                            window.location.reload();
+                        } else {
+                            $btn.prop('disabled', false);
+                            $btn.find('.na-btn-text').text('Create Account');
+                            $btn.find('.na-btn-spinner').hide();
+                            $msg.text(res.data && res.data.message ? res.data.message : 'Registration failed.').addClass('error');
+                        }
+                    },
+                    error: function(xhr) {
+                        $btn.prop('disabled', false);
+                        $btn.find('.na-btn-text').text('Create Account');
+                        $btn.find('.na-btn-spinner').hide();
+                        const err = xhr.responseJSON && xhr.responseJSON.data ? xhr.responseJSON.data.message : 'An error occurred during registration.';
+                        $msg.text(err).addClass('error');
                     }
                 });
             });
@@ -63,70 +119,131 @@
             // Logout
             $('#na-logout-btn').on('click', function(e) {
                 e.preventDefault();
+                const $btn = $(this);
+                $btn.css('opacity', '0.5');
                 $.post(NotesAdda.ajax_url, { action: 'notes_adda_logout', _ajax_nonce: NotesAdda.nonce }, function(res) {
-                    if (res.success) window.location.reload();
+                    window.location.reload();
+                }).fail(function() {
+                    window.location.reload();
                 });
             });
 
-            // Navigation
-            $('.na-nav-link').on('click', function(e) {
+            // Navigation Switcher
+            $('.na-nav-item').on('click', function(e) {
                 e.preventDefault();
-                $('.na-nav-link').removeClass('active');
-                $(this).addClass('active');
                 const view = $(this).data('view');
+                if (!view || view === self.activeView) return;
+
+                $('.na-nav-item').removeClass('active');
+                $(this).addClass('active');
+
+                self.activeView = view;
                 $('.na-view').removeClass('active').hide();
                 $('#na-view-' + view).addClass('active').show();
+                
                 self.currentPage = 1;
                 self.loadNotes(view);
             });
 
-            // Filters
+            // Toolbar Filter Handlers
             $('#na-apply-filters').on('click', function() {
+                self.currentPage = 1;
+                $('#na-reset-filters').show();
+                self.loadNotes('library');
+            });
+
+            $('#na-search-input').on('keypress', function(e) {
+                if (e.which === 13) {
+                    e.preventDefault();
+                    self.currentPage = 1;
+                    $('#na-reset-filters').show();
+                    self.loadNotes('library');
+                }
+            });
+
+            $('#na-reset-filters').on('click', function() {
+                $('#na-search-input').val('');
+                $('#na-subject-filter').val('');
+                $('#na-sort-filter').val('recent');
+                $(this).hide();
                 self.currentPage = 1;
                 self.loadNotes('library');
             });
 
-            // Pagination
+            // Pagination Click
             $(document).on('click', '.na-page-btn', function(e) {
                 e.preventDefault();
                 const page = $(this).data('page');
                 if (page) {
                     self.currentPage = page;
-                    const view = $('.na-nav-link.active').data('view');
-                    self.loadNotes(view);
+                    self.loadNotes(self.activeView);
+                    $('.na-main-container').animate({ scrollTop: 0 }, 200);
                 }
             });
 
-            // Modals
-            $('#na-new-note-btn').on('click', function(e) {
+            // Modal Triggers
+            $('#na-new-note-btn, #na-mobile-new-note-btn, .na-open-create-btn').on('click', function(e) {
                 e.preventDefault();
                 self.openFormModal();
             });
 
-            $('.na-modal-close').on('click', function() {
-                $(this).closest('.na-modal').removeClass('open');
+            // Close Modals
+            $(document).on('click', '.na-modal-close-btn', function(e) {
+                e.preventDefault();
+                const modalKey = $(this).data('modal');
+                if (modalKey === 'form') {
+                    $('#na-note-form-modal').removeClass('open');
+                } else if (modalKey === 'details') {
+                    $('#na-note-details-modal').removeClass('open');
+                } else {
+                    $('.na-modal-overlay').removeClass('open');
+                }
             });
 
-            // Form Submit
+            // Close on overlay backdrop click
+            $('.na-modal-overlay').on('click', function(e) {
+                if ($(e.target).hasClass('na-modal-overlay')) {
+                    $(this).removeClass('open');
+                }
+            });
+
+            // Close on ESC key
+            $(document).on('keydown', function(e) {
+                if (e.key === 'Escape') {
+                    $('.na-modal-overlay').removeClass('open');
+                }
+            });
+
+            // File selection change
+            $('#na-note-file').on('change', function() {
+                const file = this.files[0];
+                if (file) {
+                    $('#na-file-name-display').text(file.name + ' (' + (file.size / (1024 * 1024)).toFixed(2) + ' MB)');
+                } else {
+                    $('#na-file-name-display').text('Only PDF files up to 50 MB supported');
+                }
+            });
+
+            // Note Form Submit
             $('#na-note-form').on('submit', function(e) {
                 e.preventDefault();
                 self.saveNote();
             });
 
-            // Actions on cards
+            // Card Interactions
             $(document).on('click', '.na-btn-view', function() {
-                const noteData = $(this).closest('.na-card').data('note');
-                self.openDetailsModal(noteData);
+                const note = $(this).closest('.na-card').data('note');
+                if (note) self.openDetailsModal(note);
             });
 
             $(document).on('click', '.na-btn-edit', function() {
-                const noteData = $(this).closest('.na-card').data('note');
-                self.openFormModal(noteData);
+                const note = $(this).closest('.na-card').data('note');
+                if (note) self.openFormModal(note);
             });
 
             $(document).on('click', '.na-btn-delete', function() {
-                if (confirm('Are you sure you want to delete this note?')) {
-                    const id = $(this).closest('.na-card').data('id');
+                const id = $(this).closest('.na-card').data('id');
+                if (confirm('Are you sure you want to permanently delete this note?')) {
                     self.deleteNote(id);
                 }
             });
@@ -140,9 +257,9 @@
 
             $(document).on('click', '.na-btn-report', function() {
                 const id = $(this).closest('.na-card').data('id');
-                const reason = prompt('Please enter a reason for reporting this note:');
-                if (reason) {
-                    self.reportNote(id, reason);
+                const reason = prompt('Please specify the reason for reporting this note:');
+                if (reason && reason.trim()) {
+                    self.reportNote(id, reason.trim());
                 }
             });
         },
@@ -151,63 +268,67 @@
             const self = this;
             const $container = (view === 'my-notes') ? $('#na-my-notes-results') : $('#na-library-results');
             const $loading = (view === 'my-notes') ? $('#na-my-notes-loading') : $('#na-library-loading');
+            const $empty = (view === 'my-notes') ? $('#na-my-notes-empty') : $('#na-library-empty');
             const $pagination = (view === 'my-notes') ? $('#na-my-notes-pagination') : $('#na-library-pagination');
-            
+
             $container.empty();
-            if ($pagination.length) $pagination.empty();
+            $empty.hide();
+            $pagination.empty();
             $loading.show();
 
-            let data = {
+            const queryData = {
                 action: 'notes_adda_query_notes',
                 page: self.currentPage,
-                per_page: 12
+                per_page: 9
             };
 
             if (view === 'my-notes') {
-                data.owner_id = NotesAdda.user_id;
+                queryData.owner_id = NotesAdda.user_id;
             } else {
-                data.search = $('#na-search-input').val();
-                data.subject = $('#na-subject-filter').val();
-                
-                const sort = $('#na-sort-filter').val();
-                if (sort === 'popular') {
-                    data.orderby = 'like_count';
-                    data.order = 'DESC';
+                const searchVal = $('#na-search-input').val();
+                if (searchVal && searchVal.trim()) queryData.search = searchVal.trim();
+
+                const subjectVal = $('#na-subject-filter').val();
+                if (subjectVal) queryData.subject = subjectVal;
+
+                const sortVal = $('#na-sort-filter').val();
+                if (sortVal === 'popular') {
+                    queryData.orderby = 'like_count';
+                    queryData.order = 'DESC';
                 }
             }
 
             $.ajax({
                 url: NotesAdda.ajax_url,
                 type: 'GET',
-                data: data,
+                data: queryData,
                 success: function(res) {
                     $loading.hide();
-                    if (res.success && res.data.items && res.data.items.length > 0) {
+                    if (res.success && res.data && res.data.items && res.data.items.length > 0) {
                         self.renderNotes(res.data.items, $container, view);
-                        if ($pagination.length && res.data.total_pages > 1) {
+                        if (res.data.total_pages > 1) {
                             self.renderPagination(res.data.page, res.data.total_pages, $pagination);
                         }
                     } else {
-                        $container.html('<div class="na-empty-state"><span class="dashicons dashicons-search" style="font-size:48px; width:48px; height:48px; opacity:0.5;"></span><p>No notes found.</p></div>');
+                        $empty.show();
                     }
                 },
                 error: function() {
                     $loading.hide();
-                    $container.html('<p>Error loading notes.</p>');
+                    $container.html('<div class="na-state-box"><p style="color:var(--na-danger);">Failed to load notes. Please try again.</p></div>');
                 }
             });
         },
 
         renderPagination: function(current, total, $container) {
-            let html = '<div style="margin-top:20px; display:flex; gap:10px; justify-content:center;">';
+            let html = '';
             if (current > 1) {
-                html += `<button class="na-btn na-btn-secondary na-page-btn" data-page="${current - 1}">Previous</button>`;
+                html += `<button type="button" class="na-btn na-btn-secondary na-btn-sm na-page-btn" data-page="${current - 1}"><span class="dashicons dashicons-arrow-left-alt2"></span> Prev</button>`;
             }
-            html += `<span style="display:flex; align-items:center; padding:0 10px;">Page ${current} of ${total}</span>`;
+            html += `<span class="na-page-indicator">Page ${current} of ${total}</span>`;
             if (current < total) {
-                html += `<button class="na-btn na-btn-secondary na-page-btn" data-page="${current + 1}">Next</button>`;
+                html += `<button type="button" class="na-btn na-btn-secondary na-btn-sm na-page-btn" data-page="${current + 1}">Next <span class="dashicons dashicons-arrow-right-alt2"></span></button>`;
             }
-            html += '</div>';
             $container.html(html);
         },
 
@@ -216,107 +337,160 @@
 
             notes.forEach(function(note) {
                 const isOwner = (parseInt(note.owner_id) === parseInt(NotesAdda.user_id));
-                let actionsHtml = `<button class="na-btn-view" title="View"><span class="dashicons dashicons-visibility"></span></button>`;
-                
-                actionsHtml += `<button class="na-btn-like" title="Like"><span class="dashicons dashicons-heart"></span> <span class="like-count">${note.like_count}</span></button>`;
-                actionsHtml += `<button class="na-btn-report" title="Report"><span class="dashicons dashicons-flag"></span></button>`;
-
-                if (isOwner) {
-                    actionsHtml += `<button class="na-btn-edit" title="Edit"><span class="dashicons dashicons-edit"></span></button>`;
-                    actionsHtml += `<button class="na-btn-delete" title="Delete"><span class="dashicons dashicons-trash"></span></button>`;
-                }
 
                 const html = `
                     <div class="na-card" data-id="${note.id}">
+                        <div class="na-card-top">
+                            <div class="na-badge-group">
+                                <span class="na-badge na-badge-subject">${self.escapeHtml(note.subject || 'General')}</span>
+                                ${note.chapter ? `<span class="na-badge na-badge-chapter">${self.escapeHtml(note.chapter)}</span>` : ''}
+                                ${parseInt(note.is_whole_notes) === 1 ? `<span class="na-badge na-badge-whole">Full Course</span>` : ''}
+                            </div>
+                        </div>
                         <h3 class="na-card-title">${self.escapeHtml(note.title)}</h3>
-                        <div class="na-card-subject">${self.escapeHtml(note.subject)} ${note.chapter ? '- ' + self.escapeHtml(note.chapter) : ''}</div>
-                        <div class="na-card-desc">${self.escapeHtml(note.description || '')}</div>
-                        <div class="na-card-meta">
-                            <span>${new Date(note.created_at).toLocaleDateString()}</span>
-                            <div class="na-card-actions">${actionsHtml}</div>
+                        <p class="na-card-desc">${self.escapeHtml(note.description || 'No description provided.')}</p>
+                        <div class="na-card-tags" id="na-tags-${note.id}"></div>
+                        <div class="na-card-bottom">
+                            <span class="na-card-date">
+                                <span class="dashicons dashicons-calendar-alt"></span>
+                                ${self.formatDate(note.created_at)}
+                            </span>
+                            <div class="na-card-actions">
+                                <button type="button" class="na-icon-btn na-btn-view" title="Preview Note">
+                                    <span class="dashicons dashicons-visibility"></span>
+                                </button>
+                                ${note.file_url ? `
+                                <a href="${self.escapeHtml(note.file_url)}" target="_blank" class="na-icon-btn" title="Open PDF">
+                                    <span class="dashicons dashicons-pdf"></span>
+                                </a>` : ''}
+                                <button type="button" class="na-icon-btn na-btn-like" title="Like Note">
+                                    <span class="dashicons dashicons-heart"></span>
+                                    <span class="like-count">${note.like_count || 0}</span>
+                                </button>
+                                ${isOwner ? `
+                                <button type="button" class="na-icon-btn na-btn-edit" title="Edit Note">
+                                    <span class="dashicons dashicons-edit"></span>
+                                </button>
+                                <button type="button" class="na-icon-btn na-danger-hover na-btn-delete" title="Delete Note">
+                                    <span class="dashicons dashicons-trash"></span>
+                                </button>` : `
+                                <button type="button" class="na-icon-btn na-btn-report" title="Report Note">
+                                    <span class="dashicons dashicons-flag"></span>
+                                </button>`}
+                            </div>
                         </div>
                     </div>
                 `;
+
                 const $card = $(html);
                 $card.data('note', note);
                 $container.append($card);
-                
+
+                // Fetch tags
+                self.loadCardTags(note.id);
+
+                // Fetch like status
                 self.checkLikeStatus(note.id, $card.find('.na-btn-like'));
             });
         },
 
+        loadCardTags: function(note_id) {
+            const self = this;
+            $.get(NotesAdda.ajax_url, {
+                action: 'notes_adda_get_note_tags',
+                note_id: note_id
+            }, function(res) {
+                if (res.success && res.data && res.data.length > 0) {
+                    const tagsHtml = res.data.map(function(t) {
+                        return `<span class="na-tag">#${self.escapeHtml(t.name)}</span>`;
+                    }).join('');
+                    $(`#na-tags-${note_id}`).html(tagsHtml);
+                }
+            });
+        },
+
         checkLikeStatus: function(note_id, $btn) {
+            if (!NotesAdda.is_logged_in) return;
             $.get(NotesAdda.ajax_url, {
                 action: 'notes_adda_get_like_status',
                 note_id: note_id
             }, function(res) {
-                if (res.success && res.data.has_liked) {
+                if (res.success && res.data && res.data.has_liked) {
                     $btn.addClass('liked');
                 }
             });
         },
 
         openFormModal: function(noteData) {
-            $('#na-form-message').html('');
+            const $modal = $('#na-note-form-modal');
+            const $form = $('#na-note-form');
+            const $msg = $('#na-form-message');
+            $msg.text('').removeClass('error success');
+
             if (noteData) {
                 $('#na-note-form-title').text('Edit Note');
                 $('#na-note-id').val(noteData.id);
                 $('#na-note-title').val(noteData.title);
                 $('#na-note-subject').val(noteData.subject);
-                $('#na-note-chapter').val(noteData.chapter);
-                $('#na-note-description').val(noteData.description);
+                $('#na-note-chapter').val(noteData.chapter || '');
+                $('#na-note-description').val(noteData.description || '');
                 $('#na-note-file').val('');
                 $('#na-note-file-id').val(noteData.file_id || '');
-                $('#na-note-file-url').val(noteData.file_url);
-                $('#na-file-upload-status').text('Current file: ' + (noteData.file_url ? noteData.file_url.split('/').pop() : ''));
+                $('#na-note-file-url').val(noteData.file_url || '');
+                $('#na-file-name-display').text(noteData.file_url ? 'Current PDF: ' + noteData.file_url.split('/').pop() : 'Select a new PDF if you wish to replace');
                 $('#na-note-is-whole').prop('checked', parseInt(noteData.is_whole_notes) === 1);
-                
+                $('#na-save-note-btn .na-btn-text').text('Update Note');
+
                 $.get(NotesAdda.ajax_url, {
                     action: 'notes_adda_get_note_tags',
                     note_id: noteData.id
                 }, function(res) {
-                    if (res.success && res.data.length > 0) {
+                    if (res.success && res.data && res.data.length > 0) {
                         const tags = res.data.map(t => t.name).join(', ');
                         $('#na-note-tags').val(tags);
                     } else {
                         $('#na-note-tags').val('');
                     }
                 });
-
             } else {
-                $('#na-note-form-title').text('Create Note');
-                $('#na-note-form')[0].reset();
+                $('#na-note-form-title').text('Upload New Note');
+                $form[0].reset();
                 $('#na-note-id').val('');
-                $('#na-note-tags').val('');
-                $('#na-note-file').val('');
                 $('#na-note-file-id').val('');
                 $('#na-note-file-url').val('');
+                $('#na-file-name-display').text('Only PDF files up to 50 MB supported');
                 $('#na-file-upload-status').text('');
+                $('#na-save-note-btn .na-btn-text').text('Publish Note');
             }
-            $('#na-note-form-modal').addClass('open');
+
+            $modal.addClass('open');
         },
 
         saveNote: function() {
             const self = this;
-            const $submitBtn = $('#na-note-form button[type="submit"]');
+            const $form = $('#na-note-form');
+            const $btn = $('#na-save-note-btn');
+            const $msg = $('#na-form-message');
             const fileInput = $('#na-note-file')[0];
             const isEdit = $('#na-note-id').val() !== '';
 
-            $('#na-form-message').html('');
+            $msg.text('').removeClass('error success');
 
             if (fileInput.files.length > 0) {
                 const file = fileInput.files[0];
                 if (file.type !== 'application/pdf') {
-                    $('#na-form-message').html('<p style="color:#f87171;">Only PDF files are allowed.</p>');
+                    $msg.text('Only PDF documents are supported.').addClass('error');
                     return;
                 }
                 if (file.size > 50 * 1024 * 1024) {
-                    $('#na-form-message').html('<p style="color:#f87171;">File exceeds 50 MB limit.</p>');
+                    $msg.text('File size exceeds 50 MB limit.').addClass('error');
                     return;
                 }
 
-                $submitBtn.prop('disabled', true);
-                $('#na-file-upload-status').text('Uploading PDF, please wait...');
+                $btn.prop('disabled', true);
+                $btn.find('.na-btn-text').text('Uploading PDF...');
+                $btn.find('.na-btn-spinner').show();
+                $('#na-file-upload-status').text('Uploading file to server...');
 
                 const uploadData = new FormData();
                 uploadData.append('action', 'notes_adda_upload_note_file');
@@ -333,24 +507,28 @@
                         if (res.success) {
                             $('#na-note-file-id').val(res.data.file_id);
                             $('#na-note-file-url').val(res.data.file_url);
-                            $('#na-file-upload-status').text('Upload complete.');
+                            $('#na-file-upload-status').text('PDF uploaded successfully.');
                             self.submitNoteForm();
                         } else {
-                            $submitBtn.prop('disabled', false);
+                            $btn.prop('disabled', false);
+                            $btn.find('.na-btn-spinner').hide();
+                            $btn.find('.na-btn-text').text(isEdit ? 'Update Note' : 'Publish Note');
                             $('#na-file-upload-status').text('');
-                            $('#na-form-message').html('<p style="color:#f87171;">Upload Error: ' + res.data.message + '</p>');
+                            $msg.text('Upload Failed: ' + res.data.message).addClass('error');
                         }
                     },
                     error: function(xhr) {
-                        $submitBtn.prop('disabled', false);
+                        $btn.prop('disabled', false);
+                        $btn.find('.na-btn-spinner').hide();
+                        $btn.find('.na-btn-text').text(isEdit ? 'Update Note' : 'Publish Note');
                         $('#na-file-upload-status').text('');
-                        const msg = xhr.responseJSON ? xhr.responseJSON.data.message : 'An error occurred during upload.';
-                        $('#na-form-message').html('<p style="color:#f87171;">Upload Error: ' + msg + '</p>');
+                        const err = xhr.responseJSON && xhr.responseJSON.data ? xhr.responseJSON.data.message : 'Error uploading PDF.';
+                        $msg.text('Upload Error: ' + err).addClass('error');
                     }
                 });
             } else {
-                if (!isEdit || $('#na-note-file-url').val() === '') {
-                    $('#na-form-message').html('<p style="color:#f87171;">Please select a PDF file.</p>');
+                if (!isEdit || !$('#na-note-file-url').val()) {
+                    $msg.text('Please attach a PDF document.').addClass('error');
                     return;
                 }
                 self.submitNoteForm();
@@ -359,17 +537,21 @@
 
         submitNoteForm: function() {
             const self = this;
+            const $btn = $('#na-save-note-btn');
+            const $msg = $('#na-form-message');
             const isEdit = $('#na-note-id').val() !== '';
             const action = isEdit ? 'notes_adda_update_note' : 'notes_adda_create_note';
-            const $submitBtn = $('#na-note-form button[type="submit"]');
-            
-            $submitBtn.prop('disabled', true);
+
+            $btn.prop('disabled', true);
+            $btn.find('.na-btn-text').text('Saving note...');
+            $btn.find('.na-btn-spinner').show();
+
             const formData = $('#na-note-form').serializeArray();
-            formData.push({name: 'action', value: action});
-            formData.push({name: '_ajax_nonce', value: NotesAdda.nonce});
-            
+            formData.push({ name: 'action', value: action });
+            formData.push({ name: '_ajax_nonce', value: NotesAdda.nonce });
+
             if (!$('#na-note-is-whole').is(':checked')) {
-                formData.push({name: 'is_whole_notes', value: '0'});
+                formData.push({ name: 'is_whole_notes', value: '0' });
             }
 
             $.ajax({
@@ -377,7 +559,6 @@
                 type: 'POST',
                 data: formData,
                 success: function(res) {
-                    $submitBtn.prop('disabled', false);
                     if (res.success) {
                         const note_id = res.data.id;
                         const tagsRaw = $('#na-note-tags').val();
@@ -388,35 +569,34 @@
                                 note_id: note_id,
                                 tags: JSON.stringify(tagsArr),
                                 _ajax_nonce: NotesAdda.nonce
-                            }, function(tagRes) {
-                                if (tagRes.success) {
-                                    self.finishSave();
-                                } else {
-                                    $('#na-form-message').html('<p style="color:#f87171;">Note saved, but tag assignment failed: ' + tagRes.data.message + '</p>');
-                                }
-                            }).fail(function(xhr) {
-                                const msg = xhr.responseJSON ? xhr.responseJSON.data.message : 'An error occurred setting tags';
-                                $('#na-form-message').html('<p style="color:#f87171;">Note saved, but tag assignment failed: ' + msg + '</p>');
+                            }, function() {
+                                self.finishSave();
+                            }).fail(function() {
+                                self.finishSave();
                             });
                         } else {
                             self.finishSave();
                         }
                     } else {
-                        $('#na-form-message').html('<p style="color:#f87171;">' + res.data.message + '</p>');
+                        $btn.prop('disabled', false);
+                        $btn.find('.na-btn-spinner').hide();
+                        $btn.find('.na-btn-text').text(isEdit ? 'Update Note' : 'Publish Note');
+                        $msg.text(res.data.message).addClass('error');
                     }
                 },
                 error: function(xhr) {
-                    $submitBtn.prop('disabled', false);
-                    const msg = xhr.responseJSON ? xhr.responseJSON.data.message : 'An error occurred';
-                    $('#na-form-message').html('<p style="color:#f87171;">' + msg + '</p>');
+                    $btn.prop('disabled', false);
+                    $btn.find('.na-btn-spinner').hide();
+                    $btn.find('.na-btn-text').text(isEdit ? 'Update Note' : 'Publish Note');
+                    const err = xhr.responseJSON && xhr.responseJSON.data ? xhr.responseJSON.data.message : 'An error occurred saving the note.';
+                    $msg.text(err).addClass('error');
                 }
             });
         },
 
         finishSave: function() {
             $('#na-note-form-modal').removeClass('open');
-            const view = $('.na-nav-link.active').data('view');
-            this.loadNotes(view);
+            this.loadNotes(this.activeView);
         },
 
         deleteNote: function(id) {
@@ -427,10 +607,9 @@
                 _ajax_nonce: NotesAdda.nonce
             }, function(res) {
                 if (res.success) {
-                    const view = $('.na-nav-link.active').data('view');
-                    self.loadNotes(view);
+                    self.loadNotes(self.activeView);
                 } else {
-                    alert('Error: ' + res.data.message);
+                    alert('Error: ' + (res.data ? res.data.message : 'Could not delete note.'));
                 }
             });
         },
@@ -440,22 +619,43 @@
                 alert('Please sign in to like notes.');
                 return;
             }
+
             const action = isLiked ? 'notes_adda_remove_like' : 'notes_adda_add_like';
+            const currentCount = parseInt($btn.find('.like-count').text()) || 0;
+
+            // Optimistic update
+            if (isLiked) {
+                $btn.removeClass('liked');
+                $btn.find('.like-count').text(Math.max(0, currentCount - 1));
+            } else {
+                $btn.addClass('liked');
+                $btn.find('.like-count').text(currentCount + 1);
+            }
+
             $.post(NotesAdda.ajax_url, {
                 action: action,
                 note_id: id,
                 _ajax_nonce: NotesAdda.nonce
             }, function(res) {
                 if (res.success) {
-                    if (isLiked) {
-                        $btn.removeClass('liked');
-                    } else {
-                        $btn.addClass('liked');
-                    }
                     $btn.find('.like-count').text(res.data.like_count);
                 } else {
-                    alert(res.data.message);
+                    // Revert if error
+                    if (isLiked) {
+                        $btn.addClass('liked');
+                    } else {
+                        $btn.removeClass('liked');
+                    }
+                    $btn.find('.like-count').text(currentCount);
                 }
+            }).fail(function() {
+                // Revert
+                if (isLiked) {
+                    $btn.addClass('liked');
+                } else {
+                    $btn.removeClass('liked');
+                }
+                $btn.find('.like-count').text(currentCount);
             });
         },
 
@@ -464,6 +664,7 @@
                 alert('Please sign in to report notes.');
                 return;
             }
+
             $.post(NotesAdda.ajax_url, {
                 action: 'notes_adda_create_report',
                 note_id: id,
@@ -471,16 +672,17 @@
                 _ajax_nonce: NotesAdda.nonce
             }, function(res) {
                 if (res.success) {
-                    alert('Report submitted successfully.');
+                    alert('Note report has been submitted. Thank you for keeping Notes Adda clean.');
                 } else {
-                    alert('Error: ' + res.data.message);
+                    alert('Error: ' + (res.data ? res.data.message : 'Could not submit report.'));
                 }
             });
         },
 
         openDetailsModal: function(note) {
             const self = this;
-            $('#na-note-details-body').html('<div class="na-loading"><span class="dashicons dashicons-update na-spin"></span> Loading...</div>');
+            const $body = $('#na-note-details-body');
+            $body.html('<div class="na-state-box"><span class="dashicons dashicons-update na-spin na-state-icon"></span><p class="na-state-title">Loading note details...</p></div>');
             $('#na-note-details-modal').addClass('open');
 
             $.get(NotesAdda.ajax_url, {
@@ -488,28 +690,54 @@
                 note_id: note.id
             }, function(res) {
                 let tagsHtml = '';
-                if (res.success && res.data.length > 0) {
-                    tagsHtml = '<div class="na-tags-wrap">' + res.data.map(t => `<span class="na-tag">${self.escapeHtml(t.name)}</span>`).join('') + '</div>';
+                if (res.success && res.data && res.data.length > 0) {
+                    tagsHtml = '<div class="na-card-tags" style="margin: 12px 0;">' + res.data.map(function(t) {
+                        return `<span class="na-tag">#${self.escapeHtml(t.name)}</span>`;
+                    }).join('') + '</div>';
                 }
 
                 const html = `
-                    <h2 style="margin-top:0;">${self.escapeHtml(note.title)}</h2>
-                    <p style="color:var(--na-accent-sage); font-weight:500;">
-                        ${self.escapeHtml(note.subject)} ${note.chapter ? '- ' + self.escapeHtml(note.chapter) : ''}
-                    </p>
+                    <div class="na-preview-header">
+                        <div class="na-badge-group" style="margin-bottom:8px;">
+                            <span class="na-badge na-badge-subject">${self.escapeHtml(note.subject || 'General')}</span>
+                            ${note.chapter ? `<span class="na-badge na-badge-chapter">${self.escapeHtml(note.chapter)}</span>` : ''}
+                            ${parseInt(note.is_whole_notes) === 1 ? `<span class="na-badge na-badge-whole">Full Course</span>` : ''}
+                        </div>
+                        <h2 class="na-preview-title">${self.escapeHtml(note.title)}</h2>
+                        <div class="na-card-date">
+                            <span class="dashicons dashicons-calendar-alt"></span>
+                            Published on ${self.formatDate(note.created_at)}
+                        </div>
+                    </div>
                     ${tagsHtml}
-                    <div style="margin:20px 0; white-space:pre-wrap; color:var(--na-text-main);">${self.escapeHtml(note.description || '')}</div>
-                    <div style="margin-top:20px;">
+                    <div class="na-preview-desc">${self.escapeHtml(note.description || 'No additional description provided.')}</div>
+                    <div class="na-preview-actions">
+                        ${note.file_url ? `
                         <a href="${self.escapeHtml(note.file_url)}" target="_blank" class="na-btn na-btn-primary">
-                            <span class="dashicons dashicons-external"></span> Open File
-                        </a>
+                            <span class="dashicons dashicons-pdf"></span>
+                            <span>Open & Download PDF</span>
+                        </a>` : '<p style="color:var(--na-text-muted);">No document attached.</p>'}
                     </div>
                 `;
-                $('#na-note-details-body').html(html);
+
+                $body.html(html);
+            }).fail(function() {
+                $body.html('<p style="color:var(--na-danger);">Failed to load tags for this note.</p>');
             });
         },
 
+        formatDate: function(dateStr) {
+            if (!dateStr) return '';
+            try {
+                const d = new Date(dateStr);
+                return d.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
+            } catch (e) {
+                return dateStr;
+            }
+        },
+
         escapeHtml: function(text) {
+            if (!text) return '';
             const map = {
                 '&': '&amp;',
                 '<': '&lt;',
@@ -517,7 +745,7 @@
                 '"': '&quot;',
                 "'": '&#039;'
             };
-            return text.replace(/[&<>"']/g, function(m) { return map[m]; });
+            return String(text).replace(/[&<>"']/g, function(m) { return map[m]; });
         }
     };
 

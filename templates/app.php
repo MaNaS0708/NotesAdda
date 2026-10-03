@@ -1,192 +1,347 @@
 <div id="notes-adda-app" class="notes-adda-app-container na-theme-dark">
     <?php if ( ! is_user_logged_in() ) : ?>
         <div class="na-auth-container">
-            <div id="na-login-view" class="na-auth-view active">
-                <div class="na-brand-logo"><span class="dashicons dashicons-book"></span></div>
-                <h2>Sign In to Notes Adda</h2>
-                <form id="na-login-form">
-                    <div class="na-form-group">
-                        <label>Username or Email</label>
-                        <input type="text" name="username" class="na-input" required>
+            <div class="na-auth-card">
+                <div class="na-brand-header">
+                    <div class="na-brand-icon">
+                        <span class="dashicons dashicons-book-alt"></span>
                     </div>
-                    <div class="na-form-group">
-                        <label>Password</label>
-                        <input type="password" name="password" class="na-input" required>
-                    </div>
-                    <button type="submit" class="na-btn na-btn-primary na-btn-full">Sign In</button>
-                    <div class="na-auth-message"></div>
-                </form>
-                <p class="na-auth-switch">Don't have an account? <a href="#" data-switch="register">Create one</a></p>
-            </div>
-            
-            <div id="na-register-view" class="na-auth-view" style="display:none;">
-                <div class="na-brand-logo"><span class="dashicons dashicons-book"></span></div>
-                <h2>Create Account</h2>
-                <form id="na-register-form">
-                    <div class="na-form-group">
-                        <label>Username</label>
-                        <input type="text" name="username" class="na-input" required>
-                    </div>
-                    <div class="na-form-group">
-                        <label>Email</label>
-                        <input type="email" name="email" class="na-input" required>
-                    </div>
-                    <div class="na-form-group">
-                        <label>College</label>
-                        <input type="text" name="college" class="na-input" required>
-                    </div>
-                    <div class="na-form-group">
-                        <label>Bio (Optional)</label>
-                        <textarea name="bio" class="na-input"></textarea>
-                    </div>
-                    <div class="na-form-group">
-                        <label>Password</label>
-                        <input type="password" name="password" class="na-input" required>
-                    </div>
-                    <div class="na-form-group">
-                        <label>Confirm Password</label>
-                        <input type="password" name="confirm_password" class="na-input" required>
-                    </div>
-                    <button type="submit" class="na-btn na-btn-primary na-btn-full">Sign Up</button>
-                    <div class="na-auth-message"></div>
-                </form>
-                <p class="na-auth-switch">Already have an account? <a href="#" data-switch="login">Sign in</a></p>
+                    <h1 class="na-brand-title">Notes Adda</h1>
+                    <p class="na-brand-tagline">Your collaborative student notes hub</p>
+                </div>
+
+                <div class="na-auth-nav">
+                    <button type="button" class="na-auth-tab active" data-switch="login">Sign In</button>
+                    <button type="button" class="na-auth-tab" data-switch="register">Create Account</button>
+                </div>
+
+                <div id="na-login-view" class="na-auth-view active">
+                    <form id="na-login-form" class="na-form">
+                        <div class="na-form-group">
+                            <label for="na-login-username">Username or Email</label>
+                            <div class="na-input-wrapper">
+                                <span class="na-input-icon dashicons dashicons-admin-users"></span>
+                                <input type="text" id="na-login-username" name="username" class="na-input" placeholder="Enter username or email" required autocomplete="username">
+                            </div>
+                        </div>
+                        <div class="na-form-group">
+                            <label for="na-login-password">Password</label>
+                            <div class="na-input-wrapper">
+                                <span class="na-input-icon dashicons dashicons-lock"></span>
+                                <input type="password" id="na-login-password" name="password" class="na-input" placeholder="Enter password" required autocomplete="current-password">
+                            </div>
+                        </div>
+                        <button type="submit" class="na-btn na-btn-primary na-btn-block">
+                            <span class="na-btn-text">Sign In</span>
+                            <span class="na-btn-spinner dashicons dashicons-update na-spin" style="display:none;"></span>
+                        </button>
+                        <div class="na-auth-message"></div>
+                    </form>
+                </div>
+                
+                <div id="na-register-view" class="na-auth-view" style="display:none;">
+                    <form id="na-register-form" class="na-form">
+                        <div class="na-form-row">
+                            <div class="na-form-group na-col">
+                                <label for="na-reg-username">Username</label>
+                                <input type="text" id="na-reg-username" name="username" class="na-input" placeholder="Unique username" required autocomplete="username">
+                            </div>
+                            <div class="na-form-group na-col">
+                                <label for="na-reg-email">Email</label>
+                                <input type="email" id="na-reg-email" name="email" class="na-input" placeholder="student@college.edu" required autocomplete="email">
+                            </div>
+                        </div>
+                        <div class="na-form-group">
+                            <label for="na-reg-college">College / University</label>
+                            <input type="text" id="na-reg-college" name="college" class="na-input" placeholder="e.g. Stanford University" required>
+                        </div>
+                        <div class="na-form-group">
+                            <label for="na-reg-bio">Bio (Optional)</label>
+                            <textarea id="na-reg-bio" name="bio" class="na-input na-textarea" rows="2" placeholder="Major, year, interests..."></textarea>
+                        </div>
+                        <div class="na-form-row">
+                            <div class="na-form-group na-col">
+                                <label for="na-reg-password">Password</label>
+                                <input type="password" id="na-reg-password" name="password" class="na-input" placeholder="Min. 6 chars" required autocomplete="new-password">
+                            </div>
+                            <div class="na-form-group na-col">
+                                <label for="na-reg-confirm">Confirm Password</label>
+                                <input type="password" id="na-reg-confirm" name="confirm_password" class="na-input" placeholder="Re-enter password" required autocomplete="new-password">
+                            </div>
+                        </div>
+                        <button type="submit" class="na-btn na-btn-primary na-btn-block">
+                            <span class="na-btn-text">Create Account</span>
+                            <span class="na-btn-spinner dashicons dashicons-update na-spin" style="display:none;"></span>
+                        </button>
+                        <div class="na-auth-message"></div>
+                    </form>
+                </div>
             </div>
         </div>
     <?php else : 
         $current_user = wp_get_current_user();
     ?>
         <div class="na-app-layout">
-            <!-- Sidebar / Nav -->
-            <nav class="na-sidebar">
-                <div class="na-brand">
-                    <span class="dashicons dashicons-book"></span> Notes Adda
+            <!-- Sidebar -->
+            <aside class="na-sidebar">
+                <div class="na-sidebar-header">
+                    <div class="na-sidebar-brand">
+                        <div class="na-brand-badge"><span class="dashicons dashicons-book-alt"></span></div>
+                        <span class="na-brand-name">Notes Adda</span>
+                    </div>
                 </div>
                 
-                <div class="na-user-summary">
+                <div class="na-user-card">
                     <div class="na-user-avatar">
-                        <?php echo get_avatar($current_user->ID, 40); ?>
+                        <?php echo get_avatar( $current_user->ID, 44 ); ?>
                     </div>
-                    <div class="na-user-info">
-                        <strong><?php echo esc_html($current_user->display_name); ?></strong>
-                        <span>@<?php echo esc_html($current_user->user_login); ?></span>
+                    <div class="na-user-details">
+                        <span class="na-user-name"><?php echo esc_html( $current_user->display_name ); ?></span>
+                        <span class="na-user-handle">@<?php echo esc_html( $current_user->user_login ); ?></span>
                     </div>
                 </div>
 
-                <ul class="na-nav-menu">
-                    <li><a href="#" class="na-nav-link active" data-view="library"><span class="dashicons dashicons-portfolio"></span> Central Library</a></li>
-                    <li><a href="#" class="na-nav-link" data-view="my-notes"><span class="dashicons dashicons-category"></span> My Notes</a></li>
-                    <li><a href="#" class="na-btn na-btn-primary na-btn-full" id="na-new-note-btn"><span class="dashicons dashicons-plus"></span> New Note</a></li>
-                    <li class="na-nav-bottom" style="margin-top:auto;"><a href="#" id="na-logout-btn" class="na-nav-link"><span class="dashicons dashicons-migrate"></span> Log Out</a></li>
-                </ul>
-            </nav>
+                <div class="na-sidebar-action">
+                    <button type="button" class="na-btn na-btn-primary na-btn-block" id="na-new-note-btn">
+                        <span class="dashicons dashicons-plus-alt2"></span>
+                        <span>Upload Note</span>
+                    </button>
+                </div>
 
-            <!-- Main Content -->
-            <main class="na-main-content">
-                <!-- View: Central Library -->
+                <nav class="na-sidebar-nav">
+                    <div class="na-nav-label">Navigation</div>
+                    <ul class="na-nav-list">
+                        <li>
+                            <a href="#library" class="na-nav-item active" data-view="library">
+                                <span class="dashicons dashicons-portfolio"></span>
+                                <span class="na-nav-text">Central Library</span>
+                            </a>
+                        </li>
+                        <li>
+                            <a href="#my-notes" class="na-nav-item" data-view="my-notes">
+                                <span class="dashicons dashicons-category"></span>
+                                <span class="na-nav-text">My Notes</span>
+                            </a>
+                        </li>
+                    </ul>
+                </nav>
+
+                <div class="na-sidebar-footer">
+                    <button type="button" id="na-logout-btn" class="na-logout-btn">
+                        <span class="dashicons dashicons-migrate"></span>
+                        <span>Sign Out</span>
+                    </button>
+                </div>
+            </aside>
+
+            <!-- Main Content Area -->
+            <main class="na-main-container">
+                <!-- Mobile Top Bar -->
+                <header class="na-mobile-header">
+                    <div class="na-sidebar-brand">
+                        <div class="na-brand-badge"><span class="dashicons dashicons-book-alt"></span></div>
+                        <span class="na-brand-name">Notes Adda</span>
+                    </div>
+                    <button type="button" class="na-btn na-btn-primary na-btn-sm" id="na-mobile-new-note-btn">
+                        <span class="dashicons dashicons-plus"></span> New
+                    </button>
+                </header>
+
+                <!-- Central Library View -->
                 <section id="na-view-library" class="na-view active">
-                    <header class="na-view-header">
-                        <h2>Central Library</h2>
-                    </header>
-                    <div class="na-filters">
-                        <input type="text" id="na-search-input" placeholder="Search notes..." class="na-input">
-                        <select id="na-subject-filter" class="na-select">
-                            <option value="">All Subjects</option>
-                            <option value="Math">Math</option>
-                            <option value="Science">Science</option>
-                            <option value="History">History</option>
-                            <option value="Computer Science">Computer Science</option>
-                        </select>
-                        <select id="na-sort-filter" class="na-select">
-                            <option value="recent">Recent First</option>
-                            <option value="popular">Most Liked</option>
-                        </select>
-                        <button id="na-apply-filters" class="na-btn na-btn-secondary">Apply Filters</button>
+                    <div class="na-view-header">
+                        <div>
+                            <h2 class="na-view-title">Central Library</h2>
+                            <p class="na-view-subtitle">Explore notes uploaded by students and educators</p>
+                        </div>
                     </div>
-                    
-                    <div id="na-library-loading" class="na-loading" style="display:none;"><span class="dashicons dashicons-update na-spin"></span> Loading...</div>
-                    <div id="na-library-empty" class="na-empty-state" style="display:none; text-align:center; padding: 40px; color: var(--na-text-muted);">
-                        <span class="dashicons dashicons-search" style="font-size:40px; width:40px; height:40px; margin-bottom:10px;"></span>
-                        <p>The library is currently empty. Be the first to upload a note!</p>
+
+                    <!-- Toolbar / Filters -->
+                    <div class="na-toolbar">
+                        <div class="na-search-box">
+                            <span class="dashicons dashicons-search na-search-icon"></span>
+                            <input type="text" id="na-search-input" placeholder="Search notes by title or description..." class="na-input">
+                        </div>
+                        <div class="na-filters-row">
+                            <select id="na-subject-filter" class="na-select">
+                                <option value="">All Subjects</option>
+                                <option value="Computer Science">Computer Science</option>
+                                <option value="Mathematics">Mathematics</option>
+                                <option value="Physics">Physics</option>
+                                <option value="Chemistry">Chemistry</option>
+                                <option value="Biology">Biology</option>
+                                <option value="Engineering">Engineering</option>
+                                <option value="Economics">Economics</option>
+                                <option value="History">History</option>
+                                <option value="Literature">Literature</option>
+                                <option value="Other">Other</option>
+                            </select>
+                            <select id="na-sort-filter" class="na-select">
+                                <option value="recent">Sort: Most Recent</option>
+                                <option value="popular">Sort: Most Liked</option>
+                            </select>
+                            <button type="button" id="na-apply-filters" class="na-btn na-btn-secondary">
+                                <span class="dashicons dashicons-filter"></span>
+                                <span>Filter</span>
+                            </button>
+                            <button type="button" id="na-reset-filters" class="na-btn na-btn-ghost" style="display:none;">
+                                <span>Reset</span>
+                            </button>
+                        </div>
                     </div>
-                    <div id="na-library-results" class="na-grid"></div>
-                    <div id="na-library-pagination" class="na-pagination"></div>
+
+                    <!-- Loading State -->
+                    <div id="na-library-loading" class="na-state-box na-loading-box" style="display:none;">
+                        <span class="dashicons dashicons-update na-spin na-state-icon"></span>
+                        <p class="na-state-title">Loading notes...</p>
+                    </div>
+
+                    <!-- Empty State -->
+                    <div id="na-library-empty" class="na-state-box na-empty-box" style="display:none;">
+                        <div class="na-state-icon-wrap"><span class="dashicons dashicons-search na-state-icon"></span></div>
+                        <h3 class="na-state-title">No notes found</h3>
+                        <p class="na-state-desc">No notes match your filter criteria or the library is empty.</p>
+                        <button type="button" class="na-btn na-btn-primary na-open-create-btn">
+                            <span class="dashicons dashicons-plus"></span> Upload First Note
+                        </button>
+                    </div>
+
+                    <!-- Note Grid -->
+                    <div id="na-library-results" class="na-cards-grid"></div>
+
+                    <!-- Pagination -->
+                    <div id="na-library-pagination" class="na-pagination-container"></div>
                 </section>
 
-                <!-- View: My Notes -->
+                <!-- My Notes View -->
                 <section id="na-view-my-notes" class="na-view" style="display:none;">
-                    <header class="na-view-header">
-                        <h2>My Notes</h2>
-                    </header>
-                    <div id="na-my-notes-loading" class="na-loading" style="display:none;"><span class="dashicons dashicons-update na-spin"></span> Loading...</div>
-                    <div id="na-my-notes-empty" class="na-empty-state" style="display:none; text-align:center; padding: 40px; color: var(--na-text-muted);">
-                        <p>You haven't uploaded any notes yet.</p>
+                    <div class="na-view-header">
+                        <div>
+                            <h2 class="na-view-title">My Notes</h2>
+                            <p class="na-view-subtitle">Manage, edit, and track notes you have published</p>
+                        </div>
+                        <button type="button" class="na-btn na-btn-primary na-open-create-btn">
+                            <span class="dashicons dashicons-plus"></span> Upload Note
+                        </button>
                     </div>
-                    <div id="na-my-notes-results" class="na-grid"></div>
-                    <div id="na-my-notes-pagination" class="na-pagination"></div>
+
+                    <!-- Loading State -->
+                    <div id="na-my-notes-loading" class="na-state-box na-loading-box" style="display:none;">
+                        <span class="dashicons dashicons-update na-spin na-state-icon"></span>
+                        <p class="na-state-title">Loading your notes...</p>
+                    </div>
+
+                    <!-- Empty State -->
+                    <div id="na-my-notes-empty" class="na-state-box na-empty-box" style="display:none;">
+                        <div class="na-state-icon-wrap"><span class="dashicons dashicons-portfolio na-state-icon"></span></div>
+                        <h3 class="na-state-title">You haven't uploaded any notes yet</h3>
+                        <p class="na-state-desc">Share your lecture notes, summaries, or study guides with other students.</p>
+                        <button type="button" class="na-btn na-btn-primary na-open-create-btn">
+                            <span class="dashicons dashicons-plus"></span> Upload Your First Note
+                        </button>
+                    </div>
+
+                    <!-- Note Grid -->
+                    <div id="na-my-notes-results" class="na-cards-grid"></div>
+
+                    <!-- Pagination -->
+                    <div id="na-my-notes-pagination" class="na-pagination-container"></div>
                 </section>
             </main>
         </div>
 
-        <!-- Modal: Note Details -->
-        <div id="na-note-details-modal" class="na-modal">
-            <div class="na-modal-content">
-                <span class="na-modal-close" data-modal="details">&times;</span>
-                <div id="na-note-details-body"></div>
+        <!-- Note Details Modal -->
+        <div id="na-note-details-modal" class="na-modal-overlay">
+            <div class="na-modal-dialog">
+                <div class="na-modal-header">
+                    <h3 class="na-modal-title">Note Preview</h3>
+                    <button type="button" class="na-modal-close-btn" data-modal="details" aria-label="Close modal">
+                        <span class="dashicons dashicons-no-alt"></span>
+                    </button>
+                </div>
+                <div id="na-note-details-body" class="na-modal-body">
+                    <!-- Loaded dynamically via AJAX -->
+                </div>
             </div>
         </div>
 
-        <!-- Modal: Create / Edit Note -->
-        <div id="na-note-form-modal" class="na-modal">
-            <div class="na-modal-content">
-                <span class="na-modal-close" data-modal="form">&times;</span>
-                <h3 id="na-note-form-title">Create Note</h3>
-                <form id="na-note-form">
-                    <input type="hidden" id="na-note-id" name="note_id" value="">
-                    
-                    <div class="na-form-group">
-                        <label>Title</label>
-                        <input type="text" id="na-note-title" name="title" class="na-input" required>
-                    </div>
-                    
-                    <div class="na-form-group">
-                        <label>Subject</label>
-                        <input type="text" id="na-note-subject" name="subject" class="na-input" required>
-                    </div>
+        <!-- Create / Edit Note Modal -->
+        <div id="na-note-form-modal" class="na-modal-overlay">
+            <div class="na-modal-dialog na-modal-lg">
+                <div class="na-modal-header">
+                    <h3 id="na-note-form-title" class="na-modal-title">Upload New Note</h3>
+                    <button type="button" class="na-modal-close-btn" data-modal="form" aria-label="Close modal">
+                        <span class="dashicons dashicons-no-alt"></span>
+                    </button>
+                </div>
+                <div class="na-modal-body">
+                    <form id="na-note-form" class="na-form">
+                        <input type="hidden" id="na-note-id" name="note_id" value="">
 
-                    <div class="na-form-group">
-                        <label>Chapter</label>
-                        <input type="text" id="na-note-chapter" name="chapter" class="na-input">
-                    </div>
+                        <div class="na-form-group">
+                            <label for="na-note-title">Title <span class="na-required">*</span></label>
+                            <input type="text" id="na-note-title" name="title" class="na-input" placeholder="e.g. Operating Systems: Process Scheduling" required>
+                        </div>
 
-                    <div class="na-form-group">
-                        <label>Description</label>
-                        <textarea id="na-note-description" name="description" class="na-input"></textarea>
-                    </div>
+                        <div class="na-form-row">
+                            <div class="na-form-group na-col">
+                                <label for="na-note-subject">Subject <span class="na-required">*</span></label>
+                                <input type="text" id="na-note-subject" name="subject" class="na-input" placeholder="e.g. Computer Science" required>
+                            </div>
+                            <div class="na-form-group na-col">
+                                <label for="na-note-chapter">Chapter / Unit (Optional)</label>
+                                <input type="text" id="na-note-chapter" name="chapter" class="na-input" placeholder="e.g. Chapter 4">
+                            </div>
+                        </div>
 
-                    <div class="na-form-group">
-                        <label>PDF File</label>
-                        <input type="file" id="na-note-file" accept="application/pdf" class="na-input">
-                        <input type="hidden" id="na-note-file-url" name="file_url" value="">
-                        <input type="hidden" id="na-note-file-id" name="file_id" value="">
-                        <div id="na-file-upload-status" style="margin-top: 5px; font-size: 0.85em; color: var(--na-text-muted);"></div>
-                    </div>
+                        <div class="na-form-group">
+                            <label for="na-note-description">Description / Overview</label>
+                            <textarea id="na-note-description" name="description" class="na-input na-textarea" rows="3" placeholder="Brief summary of what this note covers..."></textarea>
+                        </div>
 
-                    <div class="na-form-group na-checkbox-group">
-                        <input type="checkbox" id="na-note-is-whole" name="is_whole_notes">
-                        <label for="na-note-is-whole">Is Whole Notes?</label>
-                    </div>
+                        <!-- PDF Upload Area -->
+                        <div class="na-form-group">
+                            <label>PDF Document <span class="na-required">*</span> <span class="na-label-hint">(Max 50 MB)</span></label>
+                            <div class="na-file-dropzone" id="na-file-dropzone">
+                                <input type="file" id="na-note-file" accept="application/pdf" class="na-file-input">
+                                <input type="hidden" id="na-note-file-url" name="file_url" value="">
+                                <input type="hidden" id="na-note-file-id" name="file_id" value="">
+                                
+                                <div class="na-dropzone-content">
+                                    <div class="na-dropzone-icon"><span class="dashicons dashicons-pdf"></span></div>
+                                    <div class="na-dropzone-text">
+                                        <span class="na-dropzone-primary">Click to select PDF or drag & drop</span>
+                                        <span class="na-dropzone-secondary" id="na-file-name-display">Only PDF files up to 50 MB supported</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div id="na-file-upload-status" class="na-file-status"></div>
+                        </div>
 
-                    <div class="na-form-group">
-                        <label>Tags (Comma separated)</label>
-                        <input type="text" id="na-note-tags" name="tags" class="na-input" placeholder="e.g. Sem 7, Midterms">
-                    </div>
+                        <div class="na-form-group na-checkbox-wrapper">
+                            <label class="na-checkbox-label">
+                                <input type="checkbox" id="na-note-is-whole" name="is_whole_notes">
+                                <span class="na-checkbox-custom"></span>
+                                <span class="na-checkbox-text">This note covers the complete course / whole syllabus</span>
+                            </label>
+                        </div>
 
-                    <div class="na-form-actions">
-                        <button type="submit" class="na-btn na-btn-primary">Save Note</button>
-                    </div>
-                    <div id="na-form-message"></div>
-                </form>
+                        <div class="na-form-group">
+                            <label for="na-note-tags">Tags <span class="na-label-hint">(Comma separated)</span></label>
+                            <input type="text" id="na-note-tags" name="tags" class="na-input" placeholder="e.g. Midterms, Sem 4, Cheatsheet">
+                        </div>
+
+                        <div id="na-form-message" class="na-form-message"></div>
+
+                        <div class="na-modal-footer">
+                            <button type="button" class="na-btn na-btn-ghost na-modal-close-btn" data-modal="form">Cancel</button>
+                            <button type="submit" class="na-btn na-btn-primary" id="na-save-note-btn">
+                                <span class="na-btn-text">Publish Note</span>
+                                <span class="na-btn-spinner dashicons dashicons-update na-spin" style="display:none;"></span>
+                            </button>
+                        </div>
+                    </form>
+                </div>
             </div>
         </div>
 
