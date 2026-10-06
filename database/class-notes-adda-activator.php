@@ -105,7 +105,7 @@ class Notes_Adda_Activator {
 				id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
 				user_id bigint(20) unsigned NOT NULL,
 				college varchar(255) NOT NULL DEFAULT '',
-				bio text NOT NULL DEFAULT '',
+				bio text NOT NULL,
 				created_at datetime NOT NULL,
 				updated_at datetime NOT NULL,
 				PRIMARY KEY (id),
