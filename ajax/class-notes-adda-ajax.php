@@ -367,6 +367,7 @@ class Notes_Adda_Ajax {
 			self::send_error( new WP_Error( 'notes_adda_forbidden', 'You do not have permission to view user management.' ) );
 		}
 
+		$owner_id = (int) get_option( 'notes_adda_owner_id' );
 		$search   = isset( $_REQUEST['search'] ) ? sanitize_text_field( wp_unslash( $_REQUEST['search'] ) ) : '';
 		$page     = isset( $_REQUEST['page'] ) ? max( 1, (int) $_REQUEST['page'] ) : 1;
 		$per_page = isset( $_REQUEST['per_page'] ) ? max( 1, min( 100, (int) $_REQUEST['per_page'] ) ) : 20;
@@ -391,12 +392,16 @@ class Notes_Adda_Ajax {
 		$user_list = array();
 		if ( ! empty( $users ) ) {
 			foreach ( $users as $u ) {
-				// Determine Notes Adda Role
 				$roles = (array) $u->roles;
+				$is_owner = ( $owner_id > 0 && (int) $u->ID === $owner_id );
+
 				$app_role = 'notes_adda_student';
 				$app_role_label = 'Student';
 
-				if ( in_array( 'notes_adda_admin', $roles, true ) || in_array( 'administrator', $roles, true ) ) {
+				if ( $is_owner ) {
+					$app_role = 'notes_adda_admin';
+					$app_role_label = 'Owner';
+				} elseif ( in_array( 'notes_adda_admin', $roles, true ) || in_array( 'administrator', $roles, true ) ) {
 					$app_role = 'notes_adda_admin';
 					$app_role_label = 'Notes Adda Admin';
 				} elseif ( in_array( 'notes_adda_expert', $roles, true ) ) {
@@ -417,7 +422,8 @@ class Notes_Adda_Ajax {
 					'college'      => $profile ? $profile->college : '',
 					'bio'          => $profile ? $profile->bio : '',
 					'registered'   => $u->user_registered,
-					'is_self'      => ( $u->ID === $user_id ),
+					'is_self'      => ( (int) $u->ID === (int) $user_id ),
+					'is_owner'     => $is_owner,
 				);
 			}
 		}
@@ -450,6 +456,12 @@ class Notes_Adda_Ajax {
 			self::send_error( new WP_Error( 'notes_adda_invalid_user_id', 'Please provide a valid user ID.' ) );
 		}
 
+		// Prevent modifying the Owner
+		$owner_id = (int) get_option( 'notes_adda_owner_id' );
+		if ( $owner_id > 0 && $target_user_id === $owner_id ) {
+			self::send_error( new WP_Error( 'notes_adda_cannot_modify_owner', 'The application owner role cannot be modified.' ) );
+		}
+
 		// Prevent self-downgrade / self-modification
 		if ( $target_user_id === $current_user_id ) {
 			self::send_error( new WP_Error( 'notes_adda_cannot_modify_self', 'You cannot change your own role to prevent accidental lockout.' ) );
@@ -457,12 +469,12 @@ class Notes_Adda_Ajax {
 
 		// Normalize role name
 		$role_map = array(
-			'student'           => 'notes_adda_student',
+			'student'            => 'notes_adda_student',
 			'notes_adda_student' => 'notes_adda_student',
-			'expert'            => 'notes_adda_expert',
-			'notes_adda_expert' => 'notes_adda_expert',
-			'admin'             => 'notes_adda_admin',
-			'notes_adda_admin'  => 'notes_adda_admin',
+			'expert'             => 'notes_adda_expert',
+			'notes_adda_expert'  => 'notes_adda_expert',
+			'admin'              => 'notes_adda_admin',
+			'notes_adda_admin'   => 'notes_adda_admin',
 		);
 
 		if ( ! isset( $role_map[ $new_role ] ) ) {
@@ -475,8 +487,13 @@ class Notes_Adda_Ajax {
 			self::send_error( new WP_Error( 'notes_adda_user_not_found', 'User does not exist.' ) );
 		}
 
-		// Set the role
-		$target_user->set_role( $assigned_role );
+		// Remove only Notes Adda specific roles, preserving WordPress core roles (e.g. administrator)
+		$target_user->remove_role( 'notes_adda_student' );
+		$target_user->remove_role( 'notes_adda_expert' );
+		$target_user->remove_role( 'notes_adda_admin' );
+
+		// Add new role
+		$target_user->add_role( $assigned_role );
 
 		wp_send_json_success(
 			array(

@@ -1408,7 +1408,7 @@
                                             <div class="na-user-row-info">
                                                 <img src="${self.escapeHtml(u.avatar_url)}" class="na-row-avatar" alt="${self.escapeHtml(u.display_name)}">
                                                 <div>
-                                                    <div class="na-row-name">${self.escapeHtml(u.display_name)} ${u.is_self ? '<span class="na-self-badge">(You)</span>' : ''}</div>
+                                                    <div class="na-row-name">${self.escapeHtml(u.display_name)} ${u.is_owner ? '<span class="na-owner-badge">(Owner)</span>' : (u.is_self ? '<span class="na-self-badge">(You)</span>' : '')}</div>
                                                     <div class="na-row-handle">@${self.escapeHtml(u.username)}</div>
                                                 </div>
                                             </div>
@@ -1417,7 +1417,9 @@
                                         <td>${self.escapeHtml(u.college || '—')}</td>
                                         <td>${self.formatDate(u.registered)}</td>
                                         <td>
-                                            ${u.is_self ? `
+                                            ${u.is_owner ? `
+                                                <span class="na-role-badge na-role-owner">Owner</span>
+                                            ` : (u.is_self ? `
                                                 <span class="na-role-badge na-role-admin">Notes Adda Admin</span>
                                             ` : `
                                                 <select class="na-select na-user-role-select" data-user-id="${u.id}" data-current-role="${u.role}" data-user-name="${self.escapeHtml(u.display_name)}" aria-label="Change role for ${self.escapeHtml(u.display_name)}">
@@ -1425,7 +1427,7 @@
                                                     <option value="notes_adda_expert" ${u.role === 'notes_adda_expert' ? 'selected' : ''}>Expert</option>
                                                     <option value="notes_adda_admin" ${u.role === 'notes_adda_admin' ? 'selected' : ''}>Notes Adda Admin</option>
                                                 </select>
-                                            `}
+                                            `)}
                                         </td>
                                     </tr>
                                 `;
@@ -1442,7 +1444,7 @@
                                 <div class="na-user-mobile-header">
                                     <img src="${self.escapeHtml(u.avatar_url)}" class="na-row-avatar" alt="${self.escapeHtml(u.display_name)}">
                                     <div>
-                                        <div class="na-row-name">${self.escapeHtml(u.display_name)} ${u.is_self ? '<span class="na-self-badge">(You)</span>' : ''}</div>
+                                        <div class="na-row-name">${self.escapeHtml(u.display_name)} ${u.is_owner ? '<span class="na-owner-badge">(Owner)</span>' : (u.is_self ? '<span class="na-self-badge">(You)</span>' : '')}</div>
                                         <div class="na-row-handle">@${self.escapeHtml(u.username)}</div>
                                     </div>
                                 </div>
@@ -1453,7 +1455,9 @@
                                 </div>
                                 <div class="na-user-mobile-role">
                                     <label>Role:</label>
-                                    ${u.is_self ? `
+                                    ${u.is_owner ? `
+                                        <span class="na-role-badge na-role-owner">Owner</span>
+                                    ` : (u.is_self ? `
                                         <span class="na-role-badge na-role-admin">Notes Adda Admin</span>
                                     ` : `
                                         <select class="na-select na-user-role-select" data-user-id="${u.id}" data-current-role="${u.role}" data-user-name="${self.escapeHtml(u.display_name)}">
@@ -1461,7 +1465,7 @@
                                             <option value="notes_adda_expert" ${u.role === 'notes_adda_expert' ? 'selected' : ''}>Expert</option>
                                             <option value="notes_adda_admin" ${u.role === 'notes_adda_admin' ? 'selected' : ''}>Notes Adda Admin</option>
                                         </select>
-                                    `}
+                                    `)}
                                 </div>
                             </div>
                         `;

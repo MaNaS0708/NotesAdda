@@ -80,14 +80,20 @@
         </div>
     <?php else : 
         $current_user = wp_get_current_user();
-        $can_upload   = current_user_can( 'notes_adda_upload_notes' ) || current_user_can( 'manage_options' );
-        $can_review   = current_user_can( 'notes_adda_review_notes' ) || current_user_can( 'manage_options' );
-        $can_subjects = current_user_can( 'notes_adda_manage_subjects' ) || current_user_can( 'manage_options' );
-        $can_users    = current_user_can( 'notes_adda_manage_users' ) || current_user_can( 'manage_options' );
+        $owner_id     = (int) get_option( 'notes_adda_owner_id' );
+        $is_owner     = ( $owner_id > 0 && (int) $current_user->ID === $owner_id );
+
+        $can_upload   = $is_owner || current_user_can( 'notes_adda_upload_notes' ) || current_user_can( 'manage_options' );
+        $can_review   = $is_owner || current_user_can( 'notes_adda_review_notes' ) || current_user_can( 'manage_options' );
+        $can_subjects = $is_owner || current_user_can( 'notes_adda_manage_subjects' ) || current_user_can( 'manage_options' );
+        $can_users    = $is_owner || current_user_can( 'notes_adda_manage_users' ) || current_user_can( 'manage_options' );
 
         $role_badge_class = 'na-role-student';
         $role_badge_text  = 'Student';
-        if ( $can_users ) {
+        if ( $is_owner ) {
+            $role_badge_class = 'na-role-owner';
+            $role_badge_text  = 'Owner';
+        } elseif ( $can_users ) {
             $role_badge_class = 'na-role-admin';
             $role_badge_text  = 'Notes Adda Admin';
         } elseif ( $can_review ) {

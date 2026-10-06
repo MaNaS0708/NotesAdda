@@ -1,8 +1,8 @@
 <?php
 /**
  * Plugin Name: Notes Adda
- * Description: Student notes sharing application with review workflows, subjects, and personal bookmarks.
- * Version: 0.2.0
+ * Description: Student notes sharing application with review workflows, subjects, personal bookmarks, and role governance.
+ * Version: 0.2.1
  * Author: Manas
  * Text Domain: notes-adda
  */
@@ -11,7 +11,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'NOTES_ADDA_VERSION', '0.2.0' );
+define( 'NOTES_ADDA_VERSION', '0.2.1' );
 define( 'NOTES_ADDA_PATH', plugin_dir_path( __FILE__ ) );
 define( 'NOTES_ADDA_URL', plugin_dir_url( __FILE__ ) );
 
@@ -39,3 +39,36 @@ add_action( 'plugins_loaded', function() {
 		Notes_Adda_Activator::activate();
 	}
 } );
+
+// Protect Owner against modification/deletion via map_meta_cap
+add_filter( 'map_meta_cap', function( $caps, $cap, $user_id, $args ) {
+	$owner_id = (int) get_option( 'notes_adda_owner_id' );
+	if ( $owner_id > 0 && in_array( $cap, array( 'delete_user', 'edit_user', 'remove_user', 'promote_user' ), true ) ) {
+		$target_user_id = isset( $args[0] ) ? (int) $args[0] : 0;
+		if ( $target_user_id === $owner_id && (int) $user_id !== $owner_id ) {
+			$caps[] = 'do_not_allow';
+		}
+	}
+	return $caps;
+}, 10, 4 );
+
+// Guarantee Owner has all notes_adda capabilities always
+add_filter( 'user_has_cap', function( $allcaps, $caps, $args, $user ) {
+	$owner_id = (int) get_option( 'notes_adda_owner_id' );
+	if ( $owner_id > 0 && $user && (int) $user->ID === $owner_id ) {
+		$allcaps['notes_adda_upload_notes']     = true;
+		$allcaps['notes_adda_review_notes']     = true;
+		$allcaps['notes_adda_manage_subjects']  = true;
+		$allcaps['notes_adda_manage_all_notes'] = true;
+		$allcaps['notes_adda_manage_users']     = true;
+	}
+	return $allcaps;
+}, 10, 4 );
+
+// Reserve the "notes_adda_dev" username on standard WordPress registration
+add_filter( 'registration_errors', function( $errors, $sanitized_user_login, $user_email ) {
+	if ( 'notes_adda_dev' === strtolower( trim( $sanitized_user_login ) ) ) {
+		$errors->add( 'notes_adda_reserved_username', __( 'This username is reserved and cannot be registered.', 'notes-adda' ) );
+	}
+	return $errors;
+}, 10, 3 );

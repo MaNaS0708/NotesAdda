@@ -25,6 +25,11 @@ class Notes_Adda_Auth {
 			wp_send_json_error( array( 'message' => 'Please fill in all required fields.' ) );
 		}
 
+		// Reserve owner username
+		if ( 'notes_adda_dev' === strtolower( trim( $username ) ) ) {
+			wp_send_json_error( array( 'message' => 'This username is reserved and cannot be registered.' ) );
+		}
+
 		if ( $password !== $confirm ) {
 			wp_send_json_error( array( 'message' => 'Passwords do not match.' ) );
 		}
@@ -44,8 +49,8 @@ class Notes_Adda_Auth {
 		}
 
 		$user = new WP_User( $user_id );
-		// Assign Student role by default
-		$user->set_role( 'notes_adda_student' );
+		// Assign Student role as an application role
+		$user->add_role( 'notes_adda_student' );
 
 		// Create Notes Adda Profile
 		if ( class_exists( 'Notes_Adda_User_Profile' ) ) {

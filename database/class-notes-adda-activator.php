@@ -201,12 +201,29 @@ class Notes_Adda_Activator {
 	}
 
 	public static function bootstrap_admin() {
+		$owner_id = (int) get_option( 'notes_adda_owner_id' );
+
+		if ( $owner_id > 0 ) {
+			$owner_user = get_userdata( $owner_id );
+			if ( $owner_user ) {
+				$owner_user->add_role( 'administrator' );
+				$owner_user->add_role( 'notes_adda_admin' );
+				return;
+			}
+		}
+
+		// Look up user by login "notes_adda_dev"
 		$dev_user = get_user_by( 'login', 'notes_adda_dev' );
 		if ( $dev_user ) {
-			$dev_user->set_role( 'notes_adda_admin' );
+			update_option( 'notes_adda_owner_id', (int) $dev_user->ID );
+			// Give that user BOTH administrator and notes_adda_admin using add_role()
+			$dev_user->add_role( 'administrator' );
+			$dev_user->add_role( 'notes_adda_admin' );
 		} else {
 			// Record safe notice if notes_adda_dev does not exist
-			add_action( 'admin_notices', array( __CLASS__, 'render_missing_dev_notice' ) );
+			if ( is_admin() ) {
+				add_action( 'admin_notices', array( __CLASS__, 'render_missing_dev_notice' ) );
+			}
 		}
 	}
 
@@ -215,27 +232,54 @@ class Notes_Adda_Activator {
 	}
 
 	public static function migrate_existing_users() {
-		$users = get_users( array( 'fields' => 'all' ) );
-		$na_roles = array( 'notes_adda_student', 'notes_adda_expert', 'notes_adda_admin', 'administrator' );
+		// Guard with an idempotent option flag so migration runs once
+		if ( get_option( 'notes_adda_users_migrated_v2' ) ) {
+			return;
+		}
+
+		$owner_id = (int) get_option( 'notes_adda_owner_id' );
+		$users    = get_users( array( 'fields' => 'all' ) );
 
 		foreach ( $users as $user ) {
+			// Never touch owner
+			if ( $owner_id > 0 && (int) $user->ID === $owner_id ) {
+				$user->add_role( 'administrator' );
+				$user->add_role( 'notes_adda_admin' );
+				continue;
+			}
+
 			if ( 'notes_adda_dev' === $user->user_login ) {
+				$user->add_role( 'administrator' );
+				$user->add_role( 'notes_adda_admin' );
 				continue;
 			}
 
 			$user_roles = (array) $user->roles;
-			$has_valid_role = false;
-			foreach ( $user_roles as $role ) {
-				if ( in_array( $role, $na_roles, true ) ) {
-					$has_valid_role = true;
-					break;
-				}
+
+			// If user is administrator or has manage_options, grant notes_adda_admin as an ADDITIONAL role.
+			// NEVER remove administrator or use set_role()!
+			if ( in_array( 'administrator', $user_roles, true ) || user_can( $user->ID, 'manage_options' ) ) {
+				$user->add_role( 'administrator' );
+				$user->add_role( 'notes_adda_admin' );
+				continue;
 			}
 
-			if ( ! $has_valid_role ) {
-				$user->set_role( 'notes_adda_student' );
+			// If user already has a Notes Adda role (e.g. expert or admin), keep it intact
+			if ( in_array( 'notes_adda_expert', $user_roles, true ) || in_array( 'notes_adda_admin', $user_roles, true ) ) {
+				continue;
+			}
+
+			// If user is subscriber or has no roles, migrate to notes_adda_student
+			if ( empty( $user_roles ) || in_array( 'subscriber', $user_roles, true ) ) {
+				$user->remove_role( 'subscriber' );
+				$user->add_role( 'notes_adda_student' );
+			} else {
+				// Other existing roles (e.g., author, editor): add notes_adda_student without replacing existing role
+				$user->add_role( 'notes_adda_student' );
 			}
 		}
+
+		update_option( 'notes_adda_users_migrated_v2', 1 );
 	}
 
 	public static function migrate_subjects() {
@@ -243,7 +287,6 @@ class Notes_Adda_Activator {
 		$notes_table    = $wpdb->prefix . 'notes_adda_notes';
 		$subjects_table = $wpdb->prefix . 'notes_adda_subjects';
 
-		// Verify table exists before querying
 		$table_exists = $wpdb->get_var( $wpdb->prepare( "SHOW TABLES LIKE %s", $subjects_table ) );
 		if ( ! $table_exists ) {
 			return;
