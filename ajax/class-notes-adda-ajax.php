@@ -13,6 +13,8 @@ class Notes_Adda_Ajax {
 		// Notes Query
 		add_action( 'wp_ajax_notes_adda_query_notes', array( __CLASS__, 'query_notes' ) );
 		add_action( 'wp_ajax_nopriv_notes_adda_query_notes', array( __CLASS__, 'query_notes' ) );
+		add_action( 'wp_ajax_notes_adda_get_note_details', array( __CLASS__, 'get_note_details' ) );
+		add_action( 'wp_ajax_nopriv_notes_adda_get_note_details', array( __CLASS__, 'get_note_details' ) );
 
 		// Notes Mutation (Logged-in only)
 		add_action( 'wp_ajax_notes_adda_create_note', array( __CLASS__, 'create_note' ) );
@@ -144,6 +146,30 @@ class Notes_Adda_Ajax {
 		}
 
 		wp_send_json_success( $result );
+	}
+
+	/**
+	 * Get full note details with contributor profile and permissions.
+	 */
+	public static function get_note_details() {
+		$note_id = isset( $_REQUEST['note_id'] ) ? (int) $_REQUEST['note_id'] : 0;
+
+		if ( $note_id <= 0 ) {
+			self::send_error( new WP_Error( 'notes_adda_invalid_note_id', 'Please provide a valid note ID.' ) );
+		}
+
+		$current_user_id = is_user_logged_in() ? get_current_user_id() : 0;
+		$details = Notes_Adda_Notes::get_details( $note_id, $current_user_id );
+
+		if ( is_wp_error( $details ) ) {
+			self::send_error( $details );
+		}
+
+		if ( ! $details ) {
+			self::send_error( new WP_Error( 'notes_adda_note_not_found', 'Note not found or has been removed.' ) );
+		}
+
+		wp_send_json_success( $details );
 	}
 
 	/**

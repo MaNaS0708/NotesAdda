@@ -27,7 +27,19 @@
 
             if (NotesAdda.is_logged_in) {
                 this.loadSubjects();
-                this.loadNotes(this.activeView);
+
+                const urlParams = new URLSearchParams(window.location.search);
+                if (urlParams.has('note_id')) {
+                    const directNoteId = parseInt(urlParams.get('note_id'));
+                    if (directNoteId > 0) {
+                        this.openNoteDetailsPage(directNoteId, false);
+                    } else {
+                        this.loadNotes(this.activeView);
+                    }
+                } else {
+                    this.loadNotes(this.activeView);
+                }
+
                 if (NotesAdda.can_manage_subjects) {
                     this.loadAdminSubjectRequests();
                 }
@@ -252,45 +264,101 @@
                 self.saveNote();
             });
 
-            // Card Interactions
-            $(document).on('click', '.na-btn-view', function() {
+            // Popstate for back/forward browser navigation
+            window.addEventListener('popstate', function() {
+                const urlParams = new URLSearchParams(window.location.search);
+                if (urlParams.has('note_id')) {
+                    const nid = parseInt(urlParams.get('note_id'));
+                    if (nid > 0) {
+                        self.openNoteDetailsPage(nid, false);
+                        return;
+                    }
+                }
+                self.switchView('library', false);
+                $('.na-nav-item').removeClass('active');
+                $('.na-nav-item[data-view="library"]').addClass('active');
+            });
+
+            // Card Click to open full Note Details Page
+            $(document).on('click', '.na-card, .na-card-title', function(e) {
+                if ($(e.target).closest('button, a, input, select, textarea, label, .na-card-actions, .na-icon-btn, .na-btn-bookmark, .na-btn-like, .na-btn-edit, .na-btn-delete, .na-btn-report, .na-btn-view').length > 0) {
+                    return;
+                }
+                e.preventDefault();
+                const noteId = $(this).closest('.na-card').data('id');
+                if (noteId) {
+                    self.openNoteDetailsPage(noteId, true);
+                }
+            });
+
+            // Back button from Note Details page & 404 state
+            $('#na-note-back-btn, #na-notfound-browse-btn').on('click', function(e) {
+                e.preventDefault();
+                const url = new URL(window.location.href);
+                url.searchParams.delete('note_id');
+                window.history.pushState(null, '', url.pathname + (url.search ? url.search : ''));
+                self.switchView('library');
+                $('.na-nav-item').removeClass('active');
+                $('.na-nav-item[data-view="library"]').addClass('active');
+            });
+
+            // Card Preview Modal Button
+            $(document).on('click', '.na-btn-view', function(e) {
+                e.stopPropagation();
                 const note = $(this).closest('.na-card, .na-review-card').data('note');
                 if (note) self.openDetailsModal(note);
             });
 
-            $(document).on('click', '.na-btn-edit', function() {
-                const note = $(this).closest('.na-card, .na-review-card').data('note');
-                if (note) self.openFormModal(note);
+            $(document).on('click', '.na-btn-edit', function(e) {
+                e.stopPropagation();
+                const $el = $(this).closest('.na-card, .na-review-card, .na-note-page-content');
+                const note = $el.data('note') || $(this).data('id') || $el.data('id');
+                if (typeof note === 'object') {
+                    self.openFormModal(note);
+                } else if (note) {
+                    $.get(NotesAdda.ajax_url, { action: 'notes_adda_get_note_details', note_id: note }, function(res) {
+                        if (res.success && res.data) {
+                            self.openFormModal(res.data);
+                        }
+                    });
+                }
             });
 
-            $(document).on('click', '.na-btn-delete', function() {
-                const id = $(this).closest('.na-card, .na-review-card').data('id');
+            $(document).on('click', '.na-btn-delete', function(e) {
+                e.stopPropagation();
+                const $btn = $(this);
+                const id = $btn.data('id') || $btn.closest('.na-card, .na-review-card, .na-note-page-content').data('id');
                 if (confirm('Are you sure you want to permanently delete this note?')) {
                     self.deleteNote(id);
                 }
             });
 
-            $(document).on('click', '.na-btn-like', function() {
+            $(document).on('click', '.na-btn-like', function(e) {
+                e.stopPropagation();
                 const $btn = $(this);
-                const id = $btn.closest('.na-card').data('id');
+                const id = $btn.data('id') || $btn.closest('.na-card, .na-review-card, .na-note-page-content').data('id');
                 const isLiked = $btn.hasClass('liked');
                 self.toggleLike(id, isLiked, $btn);
             });
 
-            $(document).on('click', '.na-btn-bookmark', function() {
+            $(document).on('click', '.na-btn-bookmark', function(e) {
+                e.stopPropagation();
                 const $btn = $(this);
-                const id = $btn.closest('.na-card, .na-review-card').data('id');
+                const id = $btn.data('id') || $btn.closest('.na-card, .na-review-card, .na-note-page-content').data('id');
                 self.toggleBookmark(id, $btn);
             });
 
-            $(document).on('click', '#na-modal-bookmark-btn', function() {
+            $(document).on('click', '#na-modal-bookmark-btn', function(e) {
+                e.stopPropagation();
                 const $btn = $(this);
                 const id = $btn.data('id');
                 self.toggleBookmark(id, $btn, true);
             });
 
-            $(document).on('click', '.na-btn-report', function() {
-                const id = $(this).closest('.na-card').data('id');
+            $(document).on('click', '.na-btn-report', function(e) {
+                e.stopPropagation();
+                const $btn = $(this);
+                const id = $btn.data('id') || $btn.closest('.na-card, .na-review-card, .na-note-page-content').data('id');
                 const reason = prompt('Please specify the reason for reporting this note:');
                 if (reason && reason.trim()) {
                     self.reportNote(id, reason.trim());
@@ -308,15 +376,17 @@
             });
 
             // Review Actions (Verify / Mark Unverified)
-            $(document).on('click', '.na-btn-verify', function() {
+            $(document).on('click', '.na-btn-verify', function(e) {
+                e.stopPropagation();
                 const $btn = $(this);
-                const id = $btn.closest('.na-review-card').data('id');
+                const id = $btn.data('id') || $btn.closest('.na-review-card, .na-note-page-content').data('id');
                 self.submitReview(id, 'verified', $btn);
             });
 
-            $(document).on('click', '.na-btn-unverify', function() {
+            $(document).on('click', '.na-btn-unverify', function(e) {
+                e.stopPropagation();
                 const $btn = $(this);
-                const id = $btn.closest('.na-review-card').data('id');
+                const id = $btn.data('id') || $btn.closest('.na-review-card, .na-note-page-content').data('id');
                 self.submitReview(id, 'unverified', $btn);
             });
 
@@ -916,7 +986,14 @@
                 _ajax_nonce: NotesAdda.nonce
             }, function(res) {
                 if (res.success) {
-                    if (self.activeView === 'review-queue') {
+                    if (self.activeView === 'note-details') {
+                        const url = new URL(window.location.href);
+                        url.searchParams.delete('note_id');
+                        window.history.pushState(null, '', url.pathname + (url.search ? url.search : ''));
+                        self.switchView('library');
+                        $('.na-nav-item').removeClass('active');
+                        $('.na-nav-item[data-view="library"]').addClass('active');
+                    } else if (self.activeView === 'review-queue') {
                         self.loadReviewQueue();
                     } else {
                         self.loadNotes(self.activeView);
@@ -936,15 +1013,14 @@
 
             const action = isLiked ? 'notes_adda_remove_like' : 'notes_adda_add_like';
             const currentCount = parseInt($btn.find('.like-count').text()) || 0;
+            const newCount = isLiked ? Math.max(0, currentCount - 1) : currentCount + 1;
+            const newLiked = !isLiked;
 
-            // Optimistic update
-            if (isLiked) {
-                $btn.removeClass('liked');
-                $btn.find('.like-count').text(Math.max(0, currentCount - 1));
-            } else {
-                $btn.addClass('liked');
-                $btn.find('.like-count').text(currentCount + 1);
-            }
+            // Optimistic update everywhere for this note
+            $(`.na-btn-like[data-id="${id}"]`)
+                .toggleClass('liked', newLiked)
+                .find('.like-count').text(newCount);
+            $('#na-detail-like-count').text(newCount);
 
             $.post(NotesAdda.ajax_url, {
                 action: action,
@@ -952,23 +1028,21 @@
                 _ajax_nonce: NotesAdda.nonce
             }, function(res) {
                 if (res.success) {
-                    $btn.find('.like-count').text(res.data.like_count);
+                    $(`.na-btn-like[data-id="${id}"]`)
+                        .find('.like-count').text(res.data.like_count);
+                    $('#na-detail-like-count').text(res.data.like_count);
                 } else {
                     // Revert if error
-                    if (isLiked) {
-                        $btn.addClass('liked');
-                    } else {
-                        $btn.removeClass('liked');
-                    }
-                    $btn.find('.like-count').text(currentCount);
+                    $(`.na-btn-like[data-id="${id}"]`)
+                        .toggleClass('liked', isLiked)
+                        .find('.like-count').text(currentCount);
+                    $('#na-detail-like-count').text(currentCount);
                 }
             }).fail(function() {
-                if (isLiked) {
-                    $btn.addClass('liked');
-                } else {
-                    $btn.removeClass('liked');
-                }
-                $btn.find('.like-count').text(currentCount);
+                $(`.na-btn-like[data-id="${id}"]`)
+                    .toggleClass('liked', isLiked)
+                    .find('.like-count').text(currentCount);
+                $('#na-detail-like-count').text(currentCount);
             });
         },
 
@@ -980,17 +1054,14 @@
             }
 
             const wasBookmarked = $btn.hasClass('bookmarked');
-            // Optimistic toggle
-            if (wasBookmarked) {
-                $btn.removeClass('bookmarked');
-                if (isModal) $btn.find('.na-btn-text').text('Bookmark');
-            } else {
-                $btn.addClass('bookmarked');
-                if (isModal) $btn.find('.na-btn-text').text('Bookmarked');
-            }
+            const newStatus = !wasBookmarked;
 
-            // Sync other card button on screen
-            $(`.na-card[data-id="${noteId}"] .na-btn-bookmark`).toggleClass('bookmarked', !wasBookmarked);
+            // Optimistic update across all buttons matching this noteId
+            $(`.na-btn-bookmark[data-id="${noteId}"], #na-modal-bookmark-btn[data-id="${noteId}"]`)
+                .toggleClass('bookmarked', newStatus)
+                .attr('title', newStatus ? 'Saved to bookmarks' : 'Save to bookmarks')
+                .attr('aria-label', newStatus ? 'Remove bookmark' : 'Save bookmark')
+                .find('.na-btn-text, .na-bookmark-text').text(newStatus ? 'Saved' : 'Save');
 
             $.post(NotesAdda.ajax_url, {
                 action: 'notes_adda_toggle_bookmark',
@@ -999,30 +1070,32 @@
             }, function(res) {
                 if (res.success) {
                     const isBookmarked = res.data.is_bookmarked;
-                    $btn.toggleClass('bookmarked', isBookmarked);
-                    $(`.na-card[data-id="${noteId}"] .na-btn-bookmark`).toggleClass('bookmarked', isBookmarked);
-                    if (isModal) {
-                        $btn.find('.na-btn-text').text(isBookmarked ? 'Bookmarked' : 'Bookmark');
-                    }
-                    // If we're on bookmarks view and removed, reload
+                    $(`.na-btn-bookmark[data-id="${noteId}"], #na-modal-bookmark-btn[data-id="${noteId}"]`)
+                        .toggleClass('bookmarked', isBookmarked)
+                        .attr('title', isBookmarked ? 'Saved to bookmarks' : 'Save to bookmarks')
+                        .attr('aria-label', isBookmarked ? 'Remove bookmark' : 'Save bookmark')
+                        .find('.na-btn-text, .na-bookmark-text').text(isBookmarked ? 'Saved' : 'Save');
+
+                    // If on bookmarks view and removed, reload
                     if (self.activeView === 'bookmarks' && !isBookmarked) {
                         self.loadNotes('bookmarks');
                     }
                 } else {
                     // Revert
-                    $btn.toggleClass('bookmarked', wasBookmarked);
-                    $(`.na-card[data-id="${noteId}"] .na-btn-bookmark`).toggleClass('bookmarked', wasBookmarked);
-                    if (isModal) {
-                        $btn.find('.na-btn-text').text(wasBookmarked ? 'Bookmarked' : 'Bookmark');
-                    }
-                    alert('Could not update bookmark.');
+                    $(`.na-btn-bookmark[data-id="${noteId}"], #na-modal-bookmark-btn[data-id="${noteId}"]`)
+                        .toggleClass('bookmarked', wasBookmarked)
+                        .attr('title', wasBookmarked ? 'Saved to bookmarks' : 'Save to bookmarks')
+                        .attr('aria-label', wasBookmarked ? 'Remove bookmark' : 'Save bookmark')
+                        .find('.na-btn-text, .na-bookmark-text').text(wasBookmarked ? 'Saved' : 'Save');
+                    alert(res.data && res.data.message ? res.data.message : 'Could not update bookmark.');
                 }
             }).fail(function() {
-                $btn.toggleClass('bookmarked', wasBookmarked);
-                $(`.na-card[data-id="${noteId}"] .na-btn-bookmark`).toggleClass('bookmarked', wasBookmarked);
-                if (isModal) {
-                    $btn.find('.na-btn-text').text(wasBookmarked ? 'Bookmarked' : 'Bookmark');
-                }
+                // Revert
+                $(`.na-btn-bookmark[data-id="${noteId}"], #na-modal-bookmark-btn[data-id="${noteId}"]`)
+                    .toggleClass('bookmarked', wasBookmarked)
+                    .attr('title', wasBookmarked ? 'Saved to bookmarks' : 'Save to bookmarks')
+                    .attr('aria-label', wasBookmarked ? 'Remove bookmark' : 'Save bookmark')
+                    .find('.na-btn-text, .na-bookmark-text').text(wasBookmarked ? 'Saved' : 'Save');
                 alert('An error occurred updating bookmark.');
             });
         },
@@ -1045,6 +1118,256 @@
                     alert('Error: ' + (res.data ? res.data.message : 'Could not submit report.'));
                 }
             });
+        },
+
+        /* ==================================================
+           NOTE DETAILS FULL PAGE
+           ================================================== */
+        openNoteDetailsPage: function(noteId, pushState) {
+            const self = this;
+            self.activeView = 'note-details';
+
+            $('.na-view').removeClass('active').hide();
+            $('#na-view-note-details').addClass('active').show();
+            $('.na-nav-item').removeClass('active');
+
+            if (pushState) {
+                const url = new URL(window.location.href);
+                url.searchParams.set('note_id', noteId);
+                window.history.pushState({ noteId: noteId, view: 'note-details' }, '', url.pathname + (url.search ? url.search : ''));
+            }
+
+            const $loading = $('#na-note-details-loading');
+            const $error = $('#na-note-details-error');
+            const $container = $('#na-note-details-container');
+
+            $container.empty();
+            $error.hide();
+            $loading.show();
+            $('.na-main-container').animate({ scrollTop: 0 }, 150);
+
+            $.get(NotesAdda.ajax_url, {
+                action: 'notes_adda_get_note_details',
+                note_id: noteId
+            }, function(res) {
+                $loading.hide();
+                if (res.success && res.data) {
+                    self.renderNoteDetailsPage(res.data);
+                } else {
+                    $error.show();
+                }
+            }).fail(function() {
+                $loading.hide();
+                $error.show();
+            });
+        },
+
+        renderNoteDetailsPage: function(note) {
+            const self = this;
+            const $container = $('#na-note-details-container');
+            const isOwner = (parseInt(note.owner_id) === parseInt(NotesAdda.user_id));
+            const isVerified = (note.review_status === 'verified');
+            const isBookmarked = !!note.is_bookmarked;
+            const isLiked = !!note.is_liked;
+            const contributor = note.contributor || {};
+            const tags = note.tags || [];
+
+            let tagsHtml = '';
+            if (tags.length > 0) {
+                tagsHtml = tags.map(function(t) {
+                    return `<span class="na-tag">#${self.escapeHtml(t.name)}</span>`;
+                }).join('');
+            }
+
+            const html = `
+                <div class="na-note-page-content" data-id="${note.id}">
+                    <div class="na-note-layout">
+                        <!-- Main Content Column -->
+                        <div class="na-note-content-column">
+                            <!-- 1. Badges Row -->
+                            <div class="na-badge-group" style="margin-bottom: 14px;">
+                                <span class="na-badge na-badge-subject">${self.escapeHtml(note.subject || 'General')}</span>
+                                ${note.chapter ? `<span class="na-badge na-badge-chapter">${self.escapeHtml(note.chapter)}</span>` : ''}
+                                ${parseInt(note.is_whole_notes) === 1 ? `<span class="na-badge na-badge-whole">Full Course</span>` : ''}
+                                ${isVerified ? `
+                                    <span class="na-badge na-badge-verified">
+                                        <span class="dashicons dashicons-yes-alt"></span> Expert Verified
+                                    </span>
+                                ` : `
+                                    <span class="na-badge na-badge-unverified">
+                                        <span class="dashicons dashicons-warning"></span> Unverified
+                                    </span>
+                                `}
+                            </div>
+
+                            <!-- 2. Note Title -->
+                            <h1 class="na-note-page-title">${self.escapeHtml(note.title)}</h1>
+
+                            <!-- 3. Verification Warning Banner (if unverified) -->
+                            ${!isVerified ? `
+                                <div class="na-unverified-warning" style="margin: 20px 0;">
+                                    <div class="na-warning-icon"><span class="dashicons dashicons-warning"></span></div>
+                                    <div class="na-warning-text">
+                                        This community note has not been verified by an expert. Please check the material independently before relying on it.
+                                    </div>
+                                </div>
+                            ` : (note.reviewer_name ? `
+                                <div class="na-verified-info" style="margin: 20px 0;">
+                                    <span class="dashicons dashicons-yes-alt"></span>
+                                    <span>Verified by <strong>${self.escapeHtml(note.reviewer_name)}</strong> ${note.reviewed_at ? 'on ' + self.formatDate(note.reviewed_at) : ''}</span>
+                                    ${note.review_note ? `<p class="na-reviewer-note-text">"${self.escapeHtml(note.review_note)}"</p>` : ''}
+                                </div>
+                            ` : '')}
+
+                            <!-- 4. Tags -->
+                            ${tagsHtml ? `<div class="na-card-tags" style="margin-bottom: 24px;">${tagsHtml}</div>` : ''}
+
+                            <!-- 5. About This Note -->
+                            <div class="na-note-section">
+                                <h3 class="na-note-section-title">About this note</h3>
+                                <div class="na-note-desc-box">
+                                    ${note.description ? `<p class="na-note-desc-text">${self.escapeHtml(note.description)}</p>` : `<p class="na-note-desc-fallback">The author did not provide a description for this study note.</p>`}
+                                </div>
+                            </div>
+
+                            <!-- 6. PDF Document Section -->
+                            <div class="na-note-section">
+                                <h3 class="na-note-section-title">Study Document</h3>
+                                <div class="na-document-card">
+                                    <div class="na-doc-icon-wrap">
+                                        <span class="dashicons dashicons-pdf"></span>
+                                    </div>
+                                    <div class="na-doc-details">
+                                        <h4 class="na-doc-name">${self.escapeHtml(note.title)}.pdf</h4>
+                                        <span class="na-doc-meta">PDF Document • Click to view or download</span>
+                                    </div>
+                                    <div class="na-doc-actions">
+                                        ${note.file_url ? `
+                                            <a href="${self.escapeHtml(note.file_url)}" target="_blank" rel="noopener noreferrer" class="na-btn na-btn-primary na-btn-doc-download">
+                                                <span class="dashicons dashicons-download"></span>
+                                                <span>Open & Download PDF</span>
+                                            </a>
+                                        ` : `<span style="color:var(--na-muted);">No document attached</span>`}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Sidebar Column -->
+                        <aside class="na-note-sidebar">
+                            <!-- 7. Note Information Card -->
+                            <div class="na-surface-card na-note-info-card">
+                                <h4 class="na-side-card-title">Note Information</h4>
+                                <dl class="na-info-list">
+                                    <div class="na-info-row">
+                                        <dt>Published</dt>
+                                        <dd>${self.formatDate(note.created_at)}</dd>
+                                    </div>
+                                    <div class="na-info-row">
+                                        <dt>Subject</dt>
+                                        <dd><strong>${self.escapeHtml(note.subject || '—')}</strong></dd>
+                                    </div>
+                                    ${note.chapter ? `
+                                        <div class="na-info-row">
+                                            <dt>Chapter / Unit</dt>
+                                            <dd>${self.escapeHtml(note.chapter)}</dd>
+                                        </div>
+                                    ` : ''}
+                                    <div class="na-info-row">
+                                        <dt>Coverage</dt>
+                                        <dd>${parseInt(note.is_whole_notes) === 1 ? 'Full Course' : 'Chapter Notes'}</dd>
+                                    </div>
+                                    <div class="na-info-row">
+                                        <dt>Total Likes</dt>
+                                        <dd id="na-detail-like-count">${note.like_count || 0}</dd>
+                                    </div>
+                                    <div class="na-info-row">
+                                        <dt>Status</dt>
+                                        <dd>
+                                            ${isVerified ? '<span class="na-status-badge na-status-approved"><span class="dashicons dashicons-yes-alt"></span> Verified</span>' : '<span class="na-status-badge na-status-pending"><span class="dashicons dashicons-warning"></span> Unverified</span>'}
+                                        </dd>
+                                    </div>
+                                </dl>
+                            </div>
+
+                            <!-- 8. About the Contributor Card -->
+                            <div class="na-surface-card na-contributor-card">
+                                <h4 class="na-side-card-title">About the Contributor</h4>
+                                <div class="na-contributor-profile">
+                                    <img src="${self.escapeHtml(contributor.avatar_url || '')}" alt="${self.escapeHtml(contributor.display_name)}" class="na-contributor-avatar">
+                                    <div class="na-contributor-meta">
+                                        <div class="na-contributor-name">${self.escapeHtml(contributor.display_name || 'Student')}</div>
+                                        ${contributor.username ? `<div class="na-contributor-handle">@${self.escapeHtml(contributor.username)}</div>` : ''}
+                                        <div class="na-contributor-stat">
+                                            <span class="dashicons dashicons-media-document"></span>
+                                            <span><strong>${contributor.notes_count || 0}</strong> note${contributor.notes_count === 1 ? '' : 's'} published</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                ${contributor.bio ? `
+                                    <div class="na-contributor-bio">
+                                        <p>${self.escapeHtml(contributor.bio)}</p>
+                                    </div>
+                                ` : ''}
+                            </div>
+
+                            <!-- 9. Related Actions Card -->
+                            <div class="na-surface-card na-note-actions-card">
+                                <h4 class="na-side-card-title">Actions</h4>
+                                <div class="na-note-actions-stack">
+                                    <button type="button" class="na-btn na-btn-block na-btn-bookmark ${isBookmarked ? 'bookmarked' : ''}" data-id="${note.id}" title="${isBookmarked ? 'Saved to bookmarks' : 'Save to bookmarks'}" aria-label="${isBookmarked ? 'Remove bookmark' : 'Save bookmark'}">
+                                        <span class="dashicons dashicons-bookmark"></span>
+                                        <span class="na-btn-text">${isBookmarked ? 'Saved' : 'Save'}</span>
+                                    </button>
+
+                                    <button type="button" class="na-btn na-btn-block na-btn-like ${isLiked ? 'liked' : ''}" data-id="${note.id}" title="Like note" aria-label="Like note">
+                                        <span class="dashicons dashicons-heart"></span>
+                                        <span class="na-btn-text">Like (<span class="like-count">${note.like_count || 0}</span>)</span>
+                                    </button>
+
+                                    ${!isOwner ? `
+                                        <button type="button" class="na-btn na-btn-ghost na-btn-block na-btn-report" data-id="${note.id}">
+                                            <span class="dashicons dashicons-flag"></span>
+                                            <span>Report Note</span>
+                                        </button>
+                                    ` : ''}
+
+                                    ${note.can_edit ? `
+                                        <button type="button" class="na-btn na-btn-secondary na-btn-block na-btn-edit" data-id="${note.id}">
+                                            <span class="dashicons dashicons-edit"></span>
+                                            <span>Edit Note</span>
+                                        </button>
+                                    ` : ''}
+
+                                    ${note.can_delete ? `
+                                        <button type="button" class="na-btn na-btn-danger na-btn-block na-btn-delete" data-id="${note.id}">
+                                            <span class="dashicons dashicons-trash"></span>
+                                            <span>Delete Note</span>
+                                        </button>
+                                    ` : ''}
+
+                                    ${note.can_review ? `
+                                        <div class="na-review-action-divider" style="margin-top:12px; padding-top:12px; border-top:1px solid var(--na-line);">
+                                            <div style="font-size:12px; font-weight:700; color:var(--na-muted); margin-bottom:8px; text-transform:uppercase;">Staff Review</div>
+                                            ${!isVerified ? `
+                                                <button type="button" class="na-btn na-btn-primary na-btn-block na-btn-verify" data-id="${note.id}">
+                                                    <span class="dashicons dashicons-yes-alt"></span> Mark Verified
+                                                </button>
+                                            ` : `
+                                                <button type="button" class="na-btn na-btn-secondary na-btn-block na-btn-unverify" data-id="${note.id}">
+                                                    <span class="dashicons dashicons-warning"></span> Mark Unverified
+                                                </button>
+                                            `}
+                                        </div>
+                                    ` : ''}
+                                </div>
+                            </div>
+                        </aside>
+                    </div>
+                </div>
+            `;
+
+            $container.html(html);
         },
 
         openDetailsModal: function(note) {

@@ -144,6 +144,27 @@ class Notes_Adda_Bookmarks {
 	}
 
 	/**
+	 * Get bookmarked notes for a specific user.
+	 *
+	 * @param int $user_id WordPress user ID.
+	 * @param int $page Page number.
+	 * @param int $per_page Items per page.
+	 * @return array|WP_Error Query result array on success, WP_Error on failure.
+	 */
+	public static function get_by_user( $user_id, $page = 1, $per_page = 10 ) {
+		$user_id = (int) $user_id;
+		if ( $user_id <= 0 ) {
+			return new WP_Error( 'notes_adda_invalid_user_id', 'Please provide a valid user ID.' );
+		}
+
+		return Notes_Adda_Note_Query::get_notes( array(
+			'bookmarked_by' => $user_id,
+			'page'          => $page,
+			'per_page'      => $per_page,
+		) );
+	}
+
+	/**
 	 * Clean up bookmarks when a note is deleted.
 	 *
 	 * @param int $note_id Note ID.

@@ -359,6 +359,37 @@
                     <div id="na-bookmarks-pagination" class="na-pagination-container"></div>
                 </section>
 
+                <!-- Dedicated Note Details View -->
+                <section id="na-view-note-details" class="na-view" style="display:none;">
+                    <div class="na-view-header na-note-page-header" style="margin-bottom:16px;">
+                        <div class="na-note-back-nav">
+                            <button type="button" class="na-btn na-btn-ghost na-back-btn" id="na-note-back-btn">
+                                <span class="dashicons dashicons-arrow-left-alt2"></span>
+                                <span>Back</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Loading State -->
+                    <div id="na-note-details-loading" class="na-state-box na-loading-box" style="display:none;">
+                        <span class="dashicons dashicons-update na-spin na-state-icon"></span>
+                        <p class="na-state-title">Loading note details...</p>
+                    </div>
+
+                    <!-- Not Found / Error State -->
+                    <div id="na-note-details-error" class="na-state-box na-empty-box" style="display:none;">
+                        <div class="na-state-icon-wrap"><span class="dashicons dashicons-warning na-state-icon"></span></div>
+                        <h3 class="na-state-title">Note not found</h3>
+                        <p class="na-state-desc">This study note does not exist or has been removed from the library.</p>
+                        <button type="button" class="na-btn na-btn-primary" id="na-notfound-browse-btn" style="margin-top:12px;">
+                            <span class="dashicons dashicons-books"></span> Back to Study Library
+                        </button>
+                    </div>
+
+                    <!-- Note Details Page Container -->
+                    <div id="na-note-details-container" class="na-note-page"></div>
+                </section>
+
                 <?php if ( $can_review ) : ?>
                     <!-- Review Queue View -->
                     <section id="na-view-review-queue" class="na-view" style="display:none;">

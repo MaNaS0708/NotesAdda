@@ -967,3 +967,350 @@
     border-top: 1px solid var(--na-line);
 }
 
+/* ==================================================
+   NOTE CARD INTERACTIVITY
+   ================================================== */
+.na-card {
+    cursor: pointer;
+}
+.na-card-title {
+    cursor: pointer;
+    transition: color var(--na-transition);
+}
+.na-card-title:hover {
+    color: var(--na-brand);
+}
+
+/* ==================================================
+   NOTE DETAILS DEDICATED PAGE
+   ================================================== */
+.na-note-page {
+    width: 100%;
+    animation: na-fade-in 0.25s ease;
+}
+
+.na-note-page-header {
+    display: flex;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.na-back-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 14px 8px 10px;
+    border-radius: var(--na-radius-sm);
+    color: var(--na-muted);
+    font-size: 14px;
+    font-weight: 600;
+    transition: all var(--na-transition);
+}
+.na-back-btn:hover {
+    color: var(--na-ink);
+    background: var(--na-surface-subtle);
+    transform: translateX(-2px);
+}
+.na-back-btn .dashicons {
+    font-size: 18px;
+    width: 18px;
+    height: 18px;
+}
+
+.na-note-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 340px;
+    gap: 32px;
+    align-items: start;
+}
+
+.na-note-content-column {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+
+.na-note-page-title {
+    margin: 0 0 4px 0;
+    font-size: clamp(26px, 3vw, 36px);
+    font-weight: 750;
+    letter-spacing: -0.035em;
+    line-height: 1.25;
+    color: var(--na-ink);
+    word-break: break-word;
+}
+
+.na-note-section {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-bottom: 28px;
+}
+
+.na-note-section-title {
+    margin: 0;
+    font-size: 17px;
+    font-weight: 700;
+    color: var(--na-ink);
+    letter-spacing: -0.015em;
+}
+
+.na-note-desc-box {
+    background: var(--na-surface);
+    border: 1px solid var(--na-line);
+    border-radius: var(--na-radius-md);
+    padding: 24px 28px;
+    box-shadow: var(--na-shadow-sm);
+}
+
+.na-note-desc-text {
+    margin: 0;
+    color: var(--na-ink-soft);
+    font-size: 15px;
+    line-height: 1.75;
+    white-space: pre-line;
+    word-break: break-word;
+}
+
+.na-note-desc-fallback {
+    margin: 0;
+    color: var(--na-muted);
+    font-size: 14px;
+    font-style: italic;
+}
+
+/* PDF Document Card */
+.na-document-card {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 20px;
+    background: var(--na-surface);
+    border: 1px solid var(--na-line);
+    border-radius: var(--na-radius-md);
+    padding: 22px 26px;
+    box-shadow: var(--na-shadow-sm);
+    transition: border-color var(--na-transition), box-shadow var(--na-transition);
+}
+
+.na-document-card:hover {
+    border-color: var(--na-line-strong);
+    box-shadow: var(--na-shadow-md);
+}
+
+.na-doc-icon-wrap {
+    width: 52px;
+    height: 52px;
+    border-radius: 14px;
+    background: var(--na-brand-soft);
+    color: var(--na-brand);
+    display: grid;
+    place-items: center;
+    flex-shrink: 0;
+}
+
+.na-doc-icon-wrap .dashicons {
+    font-size: 28px;
+    width: 28px;
+    height: 28px;
+}
+
+.na-doc-details {
+    flex: 1;
+    min-width: 0;
+}
+
+.na-doc-name {
+    margin: 0 0 4px 0;
+    font-size: 15.5px;
+    font-weight: 700;
+    color: var(--na-ink);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.na-doc-meta {
+    font-size: 13px;
+    color: var(--na-muted);
+}
+
+.na-doc-actions {
+    flex-shrink: 0;
+}
+
+.na-btn-doc-download {
+    padding: 12px 20px;
+    font-weight: 650;
+    border-radius: var(--na-radius-sm);
+}
+
+/* Sidebar Column & Surface Cards */
+.na-note-sidebar {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+    min-width: 0;
+}
+
+.na-surface-card {
+    background: var(--na-surface);
+    border: 1px solid var(--na-line);
+    border-radius: var(--na-radius-md);
+    padding: 22px 24px;
+    box-shadow: var(--na-shadow-sm);
+}
+
+.na-side-card-title {
+    margin: 0 0 16px 0;
+    font-size: 15px;
+    font-weight: 750;
+    letter-spacing: -0.015em;
+    color: var(--na-ink);
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--na-line);
+}
+
+/* Info List */
+.na-info-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin: 0;
+}
+
+.na-info-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    font-size: 13.5px;
+}
+
+.na-info-row dt {
+    color: var(--na-muted);
+    font-weight: 500;
+}
+
+.na-info-row dd {
+    margin: 0;
+    color: var(--na-ink);
+    font-weight: 600;
+    text-align: right;
+}
+
+/* Contributor Card */
+.na-contributor-profile {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+}
+
+.na-contributor-avatar {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 2px solid var(--na-line);
+    flex-shrink: 0;
+}
+
+.na-contributor-meta {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+}
+
+.na-contributor-name {
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--na-ink);
+    line-height: 1.3;
+}
+
+.na-contributor-handle {
+    font-size: 12.5px;
+    color: var(--na-muted);
+}
+
+.na-contributor-stat {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    margin-top: 4px;
+    font-size: 12px;
+    color: var(--na-brand);
+    font-weight: 500;
+}
+
+.na-contributor-stat .dashicons {
+    font-size: 14px;
+    width: 14px;
+    height: 14px;
+}
+
+.na-contributor-bio {
+    margin-top: 14px;
+    padding-top: 14px;
+    border-top: 1px solid var(--na-line);
+}
+
+.na-contributor-bio p {
+    margin: 0;
+    font-size: 13.5px;
+    line-height: 1.6;
+    color: var(--na-ink-soft);
+    word-break: break-word;
+}
+
+/* Actions Card */
+.na-note-actions-stack {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.na-btn-bookmark:not(.bookmarked) {
+    background: var(--na-surface);
+    border: 1px solid var(--na-line-strong);
+    color: var(--na-ink-soft);
+}
+.na-btn-bookmark:not(.bookmarked):hover {
+    background: var(--na-surface-subtle);
+    color: var(--na-ink);
+}
+
+.na-btn-like:not(.liked) {
+    background: var(--na-surface);
+    border: 1px solid var(--na-line-strong);
+    color: var(--na-ink-soft);
+}
+.na-btn-like:not(.liked):hover {
+    background: var(--na-surface-subtle);
+    color: var(--na-ink);
+}
+.na-btn-like.liked {
+    background: #fef3f2;
+    border: 1px solid #fecdca;
+    color: #b42318;
+}
+
+/* Responsive Rules for Note Details */
+@media (max-width: 880px) {
+    .na-note-layout {
+        grid-template-columns: 1fr;
+        gap: 24px;
+    }
+    .na-document-card {
+        flex-direction: column;
+        align-items: stretch;
+        text-align: left;
+        gap: 16px;
+    }
+    .na-doc-actions .na-btn {
+        width: 100%;
+    }
+}
+
+

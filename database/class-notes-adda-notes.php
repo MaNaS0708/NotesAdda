@@ -434,4 +434,132 @@ class Notes_Adda_Notes {
 
 		return true;
 	}
+
+	/**
+	 * Count total published notes for a specific owner.
+	 *
+	 * @param int $owner_id WordPress user ID of owner.
+	 * @return int Total notes count.
+	 */
+	public static function count_by_owner( $owner_id ) {
+		global $wpdb;
+		$owner_id = (int) $owner_id;
+		if ( $owner_id <= 0 ) {
+			return 0;
+		}
+
+		$table_name = $wpdb->prefix . 'notes_adda_notes';
+		$count = $wpdb->get_var(
+			$wpdb->prepare(
+				"SELECT COUNT(*) FROM $table_name WHERE owner_id = %d",
+				$owner_id
+			)
+		);
+
+		return (int) $count;
+	}
+
+	/**
+	 * Retrieve rich details for a single note, including contributor profile, tags, and user permissions.
+	 *
+	 * @param int $note_id         Note ID.
+	 * @param int $current_user_id Optional current user ID for bookmark and like status.
+	 * @return array|null|WP_Error Note details array, null if not found, WP_Error on failure.
+	 */
+	public static function get_details( $note_id, $current_user_id = 0 ) {
+		$note = self::get_by_id( $note_id );
+		if ( is_wp_error( $note ) ) {
+			return $note;
+		}
+		if ( ! $note ) {
+			return null;
+		}
+
+		$current_user_id = (int) $current_user_id;
+		$owner_id        = (int) $note->owner_id;
+
+		// 1. Owner & Profile Information
+		$owner = get_userdata( $owner_id );
+		$profile = class_exists( 'Notes_Adda_User_Profile' ) ? Notes_Adda_User_Profile::get_by_user_id( $owner_id ) : null;
+		$notes_count = self::count_by_owner( $owner_id );
+
+		$contributor = array(
+			'id'           => $owner ? $owner->ID : 0,
+			'display_name' => $owner ? $owner->display_name : 'Student',
+			'username'     => $owner ? $owner->user_login : '',
+			'avatar_url'   => $owner ? get_avatar_url( $owner->ID, array( 'size' => 120 ) ) : '',
+			'bio'          => ( $profile && ! empty( $profile->bio ) ) ? $profile->bio : '',
+			'notes_count'  => $notes_count,
+		);
+
+		// 2. Reviewer Information
+		$reviewer_name = '';
+		if ( ! empty( $note->reviewed_by ) ) {
+			$reviewer = get_userdata( (int) $note->reviewed_by );
+			if ( $reviewer ) {
+				$reviewer_name = $reviewer->display_name;
+			}
+		}
+
+		// 3. User bookmark & like status
+		$is_bookmarked = false;
+		$is_liked      = false;
+		if ( $current_user_id > 0 ) {
+			if ( class_exists( 'Notes_Adda_Bookmarks' ) ) {
+				$is_bookmarked = Notes_Adda_Bookmarks::has_bookmarked( $note_id, $current_user_id );
+			}
+			if ( class_exists( 'Notes_Adda_Likes' ) ) {
+				$is_liked = Notes_Adda_Likes::has_liked( $note_id, $current_user_id );
+			}
+		}
+
+		// 4. Tags
+		$tags = array();
+		if ( class_exists( 'Notes_Adda_Note_Tags' ) ) {
+			$raw_tags = Notes_Adda_Note_Tags::get_tags( $note_id );
+			if ( ! is_wp_error( $raw_tags ) && is_array( $raw_tags ) ) {
+				$tags = $raw_tags;
+			}
+		}
+
+		// 5. Capabilities & Permissions
+		$is_owner       = ( $current_user_id > 0 && $current_user_id === $owner_id );
+		$super_owner_id = (int) get_option( 'notes_adda_owner_id' );
+		$is_super_owner = ( $super_owner_id > 0 && $current_user_id === $super_owner_id );
+
+		$can_manage_all = $is_super_owner || user_can( $current_user_id, 'notes_adda_manage_all_notes' ) || user_can( $current_user_id, 'manage_options' );
+		$can_review     = $is_super_owner || user_can( $current_user_id, 'notes_adda_review_notes' ) || user_can( $current_user_id, 'manage_options' );
+		$can_edit       = $is_owner || $can_manage_all;
+		$can_delete     = $is_owner || $can_manage_all;
+
+		return array(
+			'id'             => (int) $note->id,
+			'owner_id'       => $owner_id,
+			'title'          => $note->title,
+			'subject'        => $note->subject,
+			'chapter'        => $note->chapter,
+			'is_whole_notes' => (int) $note->is_whole_notes,
+			'description'    => $note->description,
+			'file_url'       => $note->file_url,
+			'file_id'        => (int) $note->file_id,
+			'like_count'     => (int) $note->like_count,
+			'review_status'  => ! empty( $note->review_status ) ? $note->review_status : 'unverified',
+			'reviewed_by'    => $note->reviewed_by ? (int) $note->reviewed_by : null,
+			'reviewed_at'    => $note->reviewed_at,
+			'review_note'    => $note->review_note,
+			'created_at'     => $note->created_at,
+			'updated_at'     => $note->updated_at,
+			'uploader_name'  => $contributor['display_name'],
+			'uploader_login' => $contributor['username'],
+			'reviewer_name'  => $reviewer_name,
+			'is_bookmarked'  => $is_bookmarked,
+			'is_liked'       => $is_liked,
+			'is_owner'       => $is_owner,
+			'can_edit'       => $can_edit,
+			'can_delete'     => $can_delete,
+			'can_review'     => $can_review,
+			'contributor'    => $contributor,
+			'tags'           => $tags,
+		);
+	}
 }
