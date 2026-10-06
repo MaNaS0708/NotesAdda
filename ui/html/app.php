@@ -52,10 +52,6 @@
                             </div>
                         </div>
                         <div class="na-form-group">
-                            <label for="na-reg-college">College / University</label>
-                            <input type="text" id="na-reg-college" name="college" class="na-input" placeholder="e.g. Stanford University" required>
-                        </div>
-                        <div class="na-form-group">
                             <label for="na-reg-bio">Bio (Optional)</label>
                             <textarea id="na-reg-bio" name="bio" class="na-input na-textarea" rows="2" placeholder="Major, year, interests..."></textarea>
                         </div>

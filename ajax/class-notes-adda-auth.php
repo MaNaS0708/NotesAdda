@@ -18,10 +18,9 @@ class Notes_Adda_Auth {
 		$email    = isset( $_POST['email'] ) ? sanitize_email( wp_unslash( $_POST['email'] ) ) : '';
 		$password = isset( $_POST['password'] ) ? $_POST['password'] : '';
 		$confirm  = isset( $_POST['confirm_password'] ) ? $_POST['confirm_password'] : '';
-		$college  = isset( $_POST['college'] ) ? sanitize_text_field( wp_unslash( $_POST['college'] ) ) : '';
 		$bio      = isset( $_POST['bio'] ) ? sanitize_textarea_field( wp_unslash( $_POST['bio'] ) ) : '';
 
-		if ( empty( $username ) || empty( $email ) || empty( $password ) || empty( $college ) ) {
+		if ( empty( $username ) || empty( $email ) || empty( $password ) ) {
 			wp_send_json_error( array( 'message' => 'Please fill in all required fields.' ) );
 		}
 
@@ -54,7 +53,7 @@ class Notes_Adda_Auth {
 
 		// Create Notes Adda Profile
 		if ( class_exists( 'Notes_Adda_User_Profile' ) ) {
-			Notes_Adda_User_Profile::get_or_create( $user_id, array( 'college' => $college, 'bio' => $bio ) );
+			Notes_Adda_User_Profile::get_or_create( $user_id, array( 'bio' => $bio ) );
 		}
 
 		// Log in
