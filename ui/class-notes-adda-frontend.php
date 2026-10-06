@@ -51,7 +51,7 @@ class Notes_Adda_Frontend {
 			$can_request_subjects = $is_logged_in && ( $is_owner || current_user_can( 'notes_adda_request_subjects' ) || current_user_can( 'manage_options' ) );
 			$can_manage_subjects  = $is_logged_in && ( $is_owner || current_user_can( 'notes_adda_manage_subjects' ) || current_user_can( 'manage_options' ) );
 			$can_manage_users     = $is_logged_in && ( $is_owner || current_user_can( 'notes_adda_manage_users' ) || current_user_can( 'manage_options' ) );
-			$can_manage_all       = $is_logged_in && ( $is_owner || current_user_can( 'notes_adda_manage_all_notes' ) || current_user_can( 'manage_options' ) );
+			$can_manage_all       = $is_logged_in && ( $is_owner || $can_manage_users || current_user_can( 'manage_options' ) );
 
 			$app_role = 'student';
 			$role_label = 'Student';

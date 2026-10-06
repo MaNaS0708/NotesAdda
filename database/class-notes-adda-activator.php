@@ -175,19 +175,19 @@ class Notes_Adda_Activator {
 			}
 		}
 
-		// 2. Expert Role
+		// 2. Expert Role (Can review notes, upload notes, request subjects; cannot delete others' notes or manage users/subjects)
 		$expert_caps = array(
 			'read'                        => true,
 			'notes_adda_upload_notes'     => true,
 			'notes_adda_review_notes'     => true,
 			'notes_adda_request_subjects' => true,
-			'notes_adda_manage_all_notes' => true,
 		);
 		$expert_role = get_role( 'notes_adda_expert' );
 		if ( ! $expert_role ) {
 			add_role( 'notes_adda_expert', 'Expert', $expert_caps );
 		} else {
 			$expert_role->remove_cap( 'notes_adda_manage_subjects' );
+			$expert_role->remove_cap( 'notes_adda_manage_all_notes' );
 			foreach ( $expert_caps as $cap => $grant ) {
 				$expert_role->add_cap( $cap, $grant );
 			}

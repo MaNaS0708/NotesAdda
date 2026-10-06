@@ -692,6 +692,9 @@
 
             notes.forEach(function(note) {
                 const isOwner = (parseInt(note.owner_id) === parseInt(NotesAdda.user_id));
+                const isAdmin = !!(NotesAdda.is_owner || NotesAdda.can_manage_users || NotesAdda.user_role === 'admin');
+                const canDelete = isOwner || isAdmin;
+                const canEdit = isOwner || isAdmin;
                 const isVerified = (note.review_status === 'verified');
                 const isBookmarked = !!note.is_bookmarked;
 
@@ -736,16 +739,18 @@
                                     <span class="dashicons dashicons-heart"></span>
                                     <span class="like-count">${note.like_count || 0}</span>
                                 </button>
-                                ${isOwner || NotesAdda.can_manage_all_notes ? `
+                                ${canEdit ? `
                                 <button type="button" class="na-icon-btn na-btn-edit" title="Edit Note">
                                     <span class="dashicons dashicons-edit"></span>
-                                </button>
+                                </button>` : ''}
+                                ${canDelete ? `
                                 <button type="button" class="na-icon-btn na-danger-hover na-btn-delete" title="Delete Note">
                                     <span class="dashicons dashicons-trash"></span>
-                                </button>` : `
+                                </button>` : ''}
+                                ${!isOwner ? `
                                 <button type="button" class="na-icon-btn na-btn-report" title="Report Note">
                                     <span class="dashicons dashicons-flag"></span>
-                                </button>`}
+                                </button>` : ''}
                             </div>
                         </div>
                     </article>
@@ -2183,7 +2188,8 @@
                     $loading.hide();
                     if (res.success && res.data && res.data.users && res.data.users.length > 0) {
                         self.renderUsers(res.data.users, $container);
-                        $count.text(res.data.total === 1 ? '1 Community Member' : res.data.total + ' Community Members');
+                        const total = parseInt(res.data.total, 10) || 0;
+                        $count.text(total === 1 ? '1 Community Member' : total + ' Community Members');
                         if (res.data.total_pages > 1) {
                             self.renderPagination(res.data.page, res.data.total_pages, $pagination);
                         }
@@ -2210,7 +2216,6 @@
                             <tr>
                                 <th>User</th>
                                 <th>Email</th>
-                                <th>College</th>
                                 <th>Joined</th>
                                 <th>Notes Adda Role</th>
                             </tr>
@@ -2229,7 +2234,6 @@
                                             </div>
                                         </td>
                                         <td>${self.escapeHtml(u.email)}</td>
-                                        <td>${self.escapeHtml(u.college || '—')}</td>
                                         <td>${self.formatDate(u.registered)}</td>
                                         <td>
                                             ${u.is_owner ? `
@@ -2265,7 +2269,6 @@
                                 </div>
                                 <div class="na-user-mobile-meta">
                                     <div><strong>Email:</strong> ${self.escapeHtml(u.email)}</div>
-                                    <div><strong>College:</strong> ${self.escapeHtml(u.college || '—')}</div>
                                     <div><strong>Joined:</strong> ${self.formatDate(u.registered)}</div>
                                 </div>
                                 <div class="na-user-mobile-role">

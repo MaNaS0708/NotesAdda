@@ -362,9 +362,14 @@ class Notes_Adda_Notes {
 			return new WP_Error( 'notes_adda_note_not_found', 'Note does not exist.' );
 		}
 
-		// Authorization: Owner or user with notes_adda_manage_all_notes / manage_options
-		if ( (int) $note->owner_id !== $actor_id && ! user_can( $actor_id, 'notes_adda_manage_all_notes' ) && ! user_can( $actor_id, 'manage_options' ) ) {
-			return new WP_Error( 'notes_adda_forbidden', 'You are not allowed to delete this note.' );
+		// Authorization: Only note owner and administrators can delete notes (non-owners and experts cannot)
+		$super_owner_id = (int) get_option( 'notes_adda_owner_id' );
+		$is_super_owner = ( $super_owner_id > 0 && $actor_id === $super_owner_id );
+		$is_admin       = $is_super_owner || user_can( $actor_id, 'notes_adda_manage_users' ) || user_can( $actor_id, 'manage_options' );
+		$is_note_owner  = ( (int) $note->owner_id === $actor_id );
+
+		if ( ! $is_note_owner && ! $is_admin ) {
+			return new WP_Error( 'notes_adda_forbidden', 'Only the note owner and administrators can delete this note.' );
 		}
 
 		$table_notes     = $wpdb->prefix . 'notes_adda_notes';
@@ -526,11 +531,11 @@ class Notes_Adda_Notes {
 		$is_owner       = ( $current_user_id > 0 && $current_user_id === $owner_id );
 		$super_owner_id = (int) get_option( 'notes_adda_owner_id' );
 		$is_super_owner = ( $super_owner_id > 0 && $current_user_id === $super_owner_id );
+		$is_admin       = $is_super_owner || user_can( $current_user_id, 'notes_adda_manage_users' ) || user_can( $current_user_id, 'manage_options' );
 
-		$can_manage_all = $is_super_owner || user_can( $current_user_id, 'notes_adda_manage_all_notes' ) || user_can( $current_user_id, 'manage_options' );
-		$can_review     = $is_super_owner || user_can( $current_user_id, 'notes_adda_review_notes' ) || user_can( $current_user_id, 'manage_options' );
-		$can_edit       = $is_owner || $can_manage_all;
-		$can_delete     = $is_owner || $can_manage_all;
+		$can_review     = $is_admin || user_can( $current_user_id, 'notes_adda_review_notes' );
+		$can_edit       = $is_owner || $is_admin;
+		$can_delete     = $is_owner || $is_admin;
 
 		return array(
 			'id'             => (int) $note->id,

@@ -539,7 +539,7 @@ class Notes_Adda_Ajax {
 
 		$user_query = new WP_User_Query( $user_args );
 		$users      = $user_query->get_results();
-		$total      = $user_query->get_total_users();
+		$total      = (int) $user_query->get_total();
 
 		$user_list = array();
 		if ( ! empty( $users ) ) {
