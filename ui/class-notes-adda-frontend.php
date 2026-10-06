@@ -40,24 +40,49 @@ class Notes_Adda_Frontend {
 				true
 			);
 
-            // Fetch current user details
-            $current_user = wp_get_current_user();
-            $is_logged_in = is_user_logged_in();
+			// Fetch current user details and capabilities
+			$current_user = wp_get_current_user();
+			$is_logged_in = is_user_logged_in();
+
+			$can_upload          = $is_logged_in && ( current_user_can( 'notes_adda_upload_notes' ) || current_user_can( 'manage_options' ) );
+			$can_review          = $is_logged_in && ( current_user_can( 'notes_adda_review_notes' ) || current_user_can( 'manage_options' ) );
+			$can_manage_subjects = $is_logged_in && ( current_user_can( 'notes_adda_manage_subjects' ) || current_user_can( 'manage_options' ) );
+			$can_manage_users    = $is_logged_in && ( current_user_can( 'notes_adda_manage_users' ) || current_user_can( 'manage_options' ) );
+			$can_manage_all      = $is_logged_in && ( current_user_can( 'notes_adda_manage_all_notes' ) || current_user_can( 'manage_options' ) );
+
+			$app_role = 'student';
+			$role_label = 'Student';
+			if ( $can_manage_users ) {
+				$app_role = 'admin';
+				$role_label = 'Notes Adda Admin';
+			} elseif ( $can_review ) {
+				$app_role = 'expert';
+				$role_label = 'Expert';
+			}
 
 			wp_localize_script(
 				'notes-adda-app-script',
 				'NotesAdda',
 				array(
-					'ajax_url'     => admin_url( 'admin-ajax.php' ),
-					'nonce'        => wp_create_nonce( 'notes_adda_ajax_nonce' ),
-					'is_logged_in' => $is_logged_in,
-					'user_id'      => $is_logged_in ? $current_user->ID : 0,
-					'login_url'    => wp_login_url( get_permalink() ),
+					'ajax_url'             => admin_url( 'admin-ajax.php' ),
+					'nonce'                => wp_create_nonce( 'notes_adda_ajax_nonce' ),
+					'is_logged_in'         => $is_logged_in,
+					'user_id'              => $is_logged_in ? $current_user->ID : 0,
+					'user_name'            => $is_logged_in ? $current_user->display_name : '',
+					'user_login'           => $is_logged_in ? $current_user->user_login : '',
+					'user_role'            => $app_role,
+					'role_label'           => $role_label,
+					'can_upload'           => $can_upload,
+					'can_review'           => $can_review,
+					'can_manage_subjects'  => $can_manage_subjects,
+					'can_manage_users'     => $can_manage_users,
+					'can_manage_all_notes' => $can_manage_all,
+					'login_url'            => wp_login_url( get_permalink() ),
 				)
 			);
-            
-            // Enqueue Dashicons
-            wp_enqueue_style( 'dashicons' );
+
+			// Enqueue Dashicons
+			wp_enqueue_style( 'dashicons' );
 		}
 	}
 

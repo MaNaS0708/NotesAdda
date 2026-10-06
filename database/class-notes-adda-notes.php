@@ -61,6 +61,13 @@ class Notes_Adda_Notes {
 			);
 		}
 
+		if ( ! user_can( $owner_id, 'notes_adda_upload_notes' ) && ! user_can( $owner_id, 'read' ) ) {
+			return new WP_Error(
+				'notes_adda_forbidden',
+				'You do not have permission to upload notes.'
+			);
+		}
+
 		$title    = isset( $data['title'] ) ? sanitize_text_field( trim( $data['title'] ) ) : '';
 		$subject  = isset( $data['subject'] ) ? sanitize_text_field( trim( $data['subject'] ) ) : '';
 		$file_url = isset( $data['file_url'] ) ? esc_url_raw( trim( $data['file_url'] ) ) : '';
@@ -94,6 +101,7 @@ class Notes_Adda_Notes {
 
 		$table_name = $wpdb->prefix . 'notes_adda_notes';
 
+		// Every new upload starts as unverified
 		$inserted = $wpdb->insert(
 			$table_name,
 			array(
@@ -106,10 +114,14 @@ class Notes_Adda_Notes {
 				'file_url'       => $file_url,
 				'file_id'        => $file_id,
 				'like_count'     => 0,
+				'review_status'  => 'unverified',
+				'reviewed_by'    => null,
+				'reviewed_at'    => null,
+				'review_note'    => null,
 				'created_at'     => $now,
 				'updated_at'     => $now,
 			),
-			array( '%d', '%s', '%s', '%s', '%d', '%s', '%s', '%d', '%d', '%s', '%s' )
+			array( '%d', '%s', '%s', '%s', '%d', '%s', '%s', '%d', '%d', '%s', '%d', '%s', '%s', '%s', '%s' )
 		);
 
 		if ( false === $inserted ) {
@@ -156,8 +168,8 @@ class Notes_Adda_Notes {
 			return new WP_Error( 'notes_adda_note_not_found', 'Note does not exist.' );
 		}
 
-		// Authorization
-		if ( $note->owner_id != $actor_id && ! user_can( $actor_id, 'manage_options' ) ) {
+		// Authorization: Owner or user with notes_adda_manage_all_notes / manage_options
+		if ( (int) $note->owner_id !== $actor_id && ! user_can( $actor_id, 'notes_adda_manage_all_notes' ) && ! user_can( $actor_id, 'manage_options' ) ) {
 			return new WP_Error( 'notes_adda_forbidden', 'You are not allowed to update this note.' );
 		}
 
@@ -240,6 +252,84 @@ class Notes_Adda_Notes {
 	}
 
 	/**
+	 * Review a note (Verify / Mark Unverified).
+	 *
+	 * @param int    $note_id     Note ID.
+	 * @param int    $reviewer_id WordPress user ID of the reviewer.
+	 * @param string $status      Review status ('verified' or 'unverified').
+	 * @param string $review_note Optional note from reviewer.
+	 * @return object|WP_Error Updated note object or WP_Error.
+	 */
+	public static function review( $note_id, $reviewer_id, $status, $review_note = '' ) {
+		global $wpdb;
+
+		$note_id     = (int) $note_id;
+		$reviewer_id = (int) $reviewer_id;
+
+		if ( $note_id <= 0 ) {
+			return new WP_Error( 'notes_adda_invalid_note_id', 'Please provide a valid note ID.' );
+		}
+		if ( $reviewer_id <= 0 ) {
+			return new WP_Error( 'notes_adda_invalid_reviewer_id', 'Please provide a valid reviewer ID.' );
+		}
+
+		if ( ! user_can( $reviewer_id, 'notes_adda_review_notes' ) && ! user_can( $reviewer_id, 'manage_options' ) ) {
+			return new WP_Error( 'notes_adda_forbidden', 'You do not have permission to review notes.' );
+		}
+
+		$status = sanitize_key( $status );
+		if ( ! in_array( $status, array( 'verified', 'unverified' ), true ) ) {
+			return new WP_Error( 'notes_adda_invalid_status', 'Invalid review status. Allowed values: verified, unverified.' );
+		}
+
+		$note = self::get_by_id( $note_id );
+		if ( is_wp_error( $note ) ) {
+			return $note;
+		}
+		if ( ! $note ) {
+			return new WP_Error( 'notes_adda_note_not_found', 'Note does not exist.' );
+		}
+
+		$table_name   = $wpdb->prefix . 'notes_adda_notes';
+		$review_note  = sanitize_textarea_field( trim( $review_note ) );
+		$now          = current_time( 'mysql' );
+
+		if ( 'verified' === $status ) {
+			$update_data = array(
+				'review_status' => 'verified',
+				'reviewed_by'   => $reviewer_id,
+				'reviewed_at'   => $now,
+				'review_note'   => ! empty( $review_note ) ? $review_note : null,
+				'updated_at'    => $now,
+			);
+			$format = array( '%s', '%d', '%s', '%s', '%s' );
+		} else {
+			$update_data = array(
+				'review_status' => 'unverified',
+				'reviewed_by'   => null,
+				'reviewed_at'   => null,
+				'review_note'   => ! empty( $review_note ) ? $review_note : null,
+				'updated_at'    => $now,
+			);
+			$format = array( '%s', '%d', '%s', '%s', '%s' );
+		}
+
+		$updated = $wpdb->update(
+			$table_name,
+			$update_data,
+			array( 'id' => $note_id ),
+			$format,
+			array( '%d' )
+		);
+
+		if ( false === $updated ) {
+			return new WP_Error( 'notes_adda_review_failed', 'Failed to update review status in database.' );
+		}
+
+		return self::get_by_id( $note_id );
+	}
+
+	/**
 	 * Delete a note.
 	 *
 	 * @param int $note_id  Note ID.
@@ -272,14 +362,16 @@ class Notes_Adda_Notes {
 			return new WP_Error( 'notes_adda_note_not_found', 'Note does not exist.' );
 		}
 
-		// Authorization
-		if ( $note->owner_id != $actor_id && ! user_can( $actor_id, 'manage_options' ) ) {
+		// Authorization: Owner or user with notes_adda_manage_all_notes / manage_options
+		if ( (int) $note->owner_id !== $actor_id && ! user_can( $actor_id, 'notes_adda_manage_all_notes' ) && ! user_can( $actor_id, 'manage_options' ) ) {
 			return new WP_Error( 'notes_adda_forbidden', 'You are not allowed to delete this note.' );
 		}
 
-		$table_notes = $wpdb->prefix . 'notes_adda_notes';
-		$table_tags  = $wpdb->prefix . 'notes_adda_note_tags';
-		$table_likes = $wpdb->prefix . 'notes_adda_likes';
+		$table_notes     = $wpdb->prefix . 'notes_adda_notes';
+		$table_tags      = $wpdb->prefix . 'notes_adda_note_tags';
+		$table_likes     = $wpdb->prefix . 'notes_adda_likes';
+		$table_reports   = $wpdb->prefix . 'notes_adda_reports';
+		$table_bookmarks = $wpdb->prefix . 'notes_adda_bookmarks';
 
 		$wpdb->query( 'START TRANSACTION' );
 
@@ -289,7 +381,6 @@ class Notes_Adda_Notes {
 			array( 'note_id' => $note_id ),
 			array( '%d' )
 		);
-
 		if ( false === $deleted_tags ) {
 			$wpdb->query( 'ROLLBACK' );
 			return new WP_Error( 'notes_adda_note_delete_failed', 'Failed to delete note tags from database.' );
@@ -301,23 +392,31 @@ class Notes_Adda_Notes {
 			array( 'note_id' => $note_id ),
 			array( '%d' )
 		);
-
 		if ( false === $deleted_likes ) {
 			$wpdb->query( 'ROLLBACK' );
 			return new WP_Error( 'notes_adda_note_delete_failed', 'Failed to delete note likes from database.' );
 		}
 
-		$table_reports = $wpdb->prefix . 'notes_adda_reports';
 		// Delete from reports
 		$deleted_reports = $wpdb->delete(
 			$table_reports,
 			array( 'note_id' => $note_id ),
 			array( '%d' )
 		);
-
 		if ( false === $deleted_reports ) {
 			$wpdb->query( 'ROLLBACK' );
 			return new WP_Error( 'notes_adda_note_delete_failed', 'Failed to delete note reports from database.' );
+		}
+
+		// Delete from bookmarks
+		$deleted_bookmarks = $wpdb->delete(
+			$table_bookmarks,
+			array( 'note_id' => $note_id ),
+			array( '%d' )
+		);
+		if ( false === $deleted_bookmarks ) {
+			$wpdb->query( 'ROLLBACK' );
+			return new WP_Error( 'notes_adda_note_delete_failed', 'Failed to delete note bookmarks from database.' );
 		}
 
 		// Delete from notes
@@ -326,7 +425,6 @@ class Notes_Adda_Notes {
 			array( 'id' => $note_id ),
 			array( '%d' )
 		);
-
 		if ( false === $deleted_note ) {
 			$wpdb->query( 'ROLLBACK' );
 			return new WP_Error( 'notes_adda_note_delete_failed', 'Failed to delete note from database.' );

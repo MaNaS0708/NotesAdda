@@ -80,6 +80,20 @@
         </div>
     <?php else : 
         $current_user = wp_get_current_user();
+        $can_upload   = current_user_can( 'notes_adda_upload_notes' ) || current_user_can( 'manage_options' );
+        $can_review   = current_user_can( 'notes_adda_review_notes' ) || current_user_can( 'manage_options' );
+        $can_subjects = current_user_can( 'notes_adda_manage_subjects' ) || current_user_can( 'manage_options' );
+        $can_users    = current_user_can( 'notes_adda_manage_users' ) || current_user_can( 'manage_options' );
+
+        $role_badge_class = 'na-role-student';
+        $role_badge_text  = 'Student';
+        if ( $can_users ) {
+            $role_badge_class = 'na-role-admin';
+            $role_badge_text  = 'Notes Adda Admin';
+        } elseif ( $can_review ) {
+            $role_badge_class = 'na-role-expert';
+            $role_badge_text  = 'Expert';
+        }
     ?>
         <div class="na-app-layout">
             <!-- Sidebar -->
@@ -100,7 +114,10 @@
                     </div>
                     <div class="na-user-details">
                         <span class="na-user-name"><?php echo esc_html( $current_user->display_name ); ?></span>
-                        <span class="na-user-handle">@<?php echo esc_html( $current_user->user_login ); ?></span>
+                        <div class="na-user-meta-row">
+                            <span class="na-user-handle">@<?php echo esc_html( $current_user->user_login ); ?></span>
+                            <span class="na-role-badge <?php echo esc_attr( $role_badge_class ); ?>"><?php echo esc_html( $role_badge_text ); ?></span>
+                        </div>
                     </div>
                 </div>
 
@@ -126,7 +143,43 @@
                                 <span class="na-nav-text">My Notes</span>
                             </a>
                         </li>
+                        <li>
+                            <a href="#bookmarks" class="na-nav-item" data-view="bookmarks">
+                                <span class="dashicons dashicons-bookmark"></span>
+                                <span class="na-nav-text">Bookmarks</span>
+                            </a>
+                        </li>
                     </ul>
+
+                    <?php if ( $can_review || $can_subjects || $can_users ) : ?>
+                        <div class="na-nav-label" style="margin-top:20px;">Administration</div>
+                        <ul class="na-nav-list">
+                            <?php if ( $can_review ) : ?>
+                                <li>
+                                    <a href="#review-queue" class="na-nav-item" data-view="review-queue">
+                                        <span class="dashicons dashicons-shield"></span>
+                                        <span class="na-nav-text">Review Queue</span>
+                                    </a>
+                                </li>
+                            <?php endif; ?>
+                            <?php if ( $can_subjects ) : ?>
+                                <li>
+                                    <a href="#subjects" class="na-nav-item" data-view="subjects">
+                                        <span class="dashicons dashicons-tag"></span>
+                                        <span class="na-nav-text">Subject Management</span>
+                                    </a>
+                                </li>
+                            <?php endif; ?>
+                            <?php if ( $can_users ) : ?>
+                                <li>
+                                    <a href="#users" class="na-nav-item" data-view="users">
+                                        <span class="dashicons dashicons-admin-users"></span>
+                                        <span class="na-nav-text">User Management</span>
+                                    </a>
+                                </li>
+                            <?php endif; ?>
+                        </ul>
+                    <?php endif; ?>
                 </nav>
 
                 <div class="na-sidebar-footer">
@@ -170,20 +223,10 @@
                             <input type="search" id="na-search-input" placeholder="Search by subject, topic, or title" class="na-input" aria-label="Search notes">
                         </div>
                         <div class="na-filters-row">
-                            <select id="na-subject-filter" class="na-select">
+                            <select id="na-subject-filter" class="na-select" aria-label="Filter by subject">
                                 <option value="">All Subjects</option>
-                                <option value="Computer Science">Computer Science</option>
-                                <option value="Mathematics">Mathematics</option>
-                                <option value="Physics">Physics</option>
-                                <option value="Chemistry">Chemistry</option>
-                                <option value="Biology">Biology</option>
-                                <option value="Engineering">Engineering</option>
-                                <option value="Economics">Economics</option>
-                                <option value="History">History</option>
-                                <option value="Literature">Literature</option>
-                                <option value="Other">Other</option>
                             </select>
-                            <select id="na-sort-filter" class="na-select">
+                            <select id="na-sort-filter" class="na-select" aria-label="Sort notes">
                                 <option value="recent">Sort: Most Recent</option>
                                 <option value="popular">Sort: Most Liked</option>
                             </select>
@@ -265,12 +308,208 @@
                     <!-- Pagination -->
                     <div id="na-my-notes-pagination" class="na-pagination-container"></div>
                 </section>
+
+                <!-- Bookmarks View -->
+                <section id="na-view-bookmarks" class="na-view" style="display:none;">
+                    <div class="na-view-header">
+                        <div>
+                            <span class="na-eyebrow">Saved for quick study</span>
+                            <h2 class="na-view-title">My Bookmarks</h2>
+                            <p class="na-view-subtitle">Access your collection of saved study guides, notes, and full-course materials.</p>
+                        </div>
+                        <button type="button" class="na-btn na-btn-secondary" id="na-bookmarks-browse-btn">
+                            <span class="dashicons dashicons-books"></span> Browse Library
+                        </button>
+                    </div>
+
+                    <div class="na-results-meta">
+                        <span id="na-bookmarks-result-count">Your saved notes</span>
+                        <span class="na-results-meta-hint">Click the bookmark icon on any note card to save or remove.</span>
+                    </div>
+
+                    <!-- Loading State -->
+                    <div id="na-bookmarks-loading" class="na-state-box na-loading-box" style="display:none;">
+                        <span class="dashicons dashicons-update na-spin na-state-icon"></span>
+                        <p class="na-state-title">Loading bookmarks...</p>
+                    </div>
+
+                    <!-- Empty State -->
+                    <div id="na-bookmarks-empty" class="na-state-box na-empty-box" style="display:none;">
+                        <div class="na-state-icon-wrap"><span class="dashicons dashicons-bookmark na-state-icon"></span></div>
+                        <h3 class="na-state-title">No bookmarks yet</h3>
+                        <p class="na-state-desc">You haven't bookmarked any notes yet. Browse the library to save materials for quick access.</p>
+                        <button type="button" class="na-btn na-btn-primary" id="na-empty-browse-btn">
+                            <span class="dashicons dashicons-search"></span> Explore Study Notes
+                        </button>
+                    </div>
+
+                    <!-- Bookmarks Grid -->
+                    <div id="na-bookmarks-results" class="na-cards-grid"></div>
+
+                    <!-- Pagination -->
+                    <div id="na-bookmarks-pagination" class="na-pagination-container"></div>
+                </section>
+
+                <?php if ( $can_review ) : ?>
+                    <!-- Review Queue View -->
+                    <section id="na-view-review-queue" class="na-view" style="display:none;">
+                        <div class="na-view-header">
+                            <div>
+                                <span class="na-eyebrow">Quality & Verification</span>
+                                <h2 class="na-view-title">Review Queue</h2>
+                                <p class="na-view-subtitle">Review student submissions, verify reliable notes, and moderate community content.</p>
+                            </div>
+                        </div>
+
+                        <!-- Review Tabs -->
+                        <div class="na-review-filter-tabs">
+                            <button type="button" class="na-tab-btn active" data-review-status="unverified">
+                                <span class="dashicons dashicons-warning"></span>
+                                <span>Unverified Notes</span>
+                            </button>
+                            <button type="button" class="na-tab-btn" data-review-status="all">
+                                <span class="dashicons dashicons-list-view"></span>
+                                <span>All Notes</span>
+                            </button>
+                            <button type="button" class="na-tab-btn" data-review-status="verified">
+                                <span class="dashicons dashicons-yes-alt"></span>
+                                <span>Verified Notes</span>
+                            </button>
+                        </div>
+
+                        <div class="na-results-meta">
+                            <span id="na-review-result-count">Notes awaiting review</span>
+                            <span class="na-results-meta-hint">Review content before marking verified or removing inappropriate materials.</span>
+                        </div>
+
+                        <!-- Loading State -->
+                        <div id="na-review-loading" class="na-state-box na-loading-box" style="display:none;">
+                            <span class="dashicons dashicons-update na-spin na-state-icon"></span>
+                            <p class="na-state-title">Loading review queue...</p>
+                        </div>
+
+                        <!-- Empty State -->
+                        <div id="na-review-empty" class="na-state-box na-empty-box" style="display:none;">
+                            <div class="na-state-icon-wrap"><span class="dashicons dashicons-yes-alt na-state-icon"></span></div>
+                            <h3 class="na-state-title">Queue is clear!</h3>
+                            <p class="na-state-desc">There are no unverified notes awaiting review right now.</p>
+                        </div>
+
+                        <!-- Review Queue Items -->
+                        <div id="na-review-results" class="na-review-list"></div>
+
+                        <!-- Pagination -->
+                        <div id="na-review-pagination" class="na-pagination-container"></div>
+                    </section>
+                <?php endif; ?>
+
+                <?php if ( $can_subjects ) : ?>
+                    <!-- Subject Management View -->
+                    <section id="na-view-subjects" class="na-view" style="display:none;">
+                        <div class="na-view-header">
+                            <div>
+                                <span class="na-eyebrow">Taxonomy Management</span>
+                                <h2 class="na-view-title">Subject Management</h2>
+                                <p class="na-view-subtitle">Create and organize standard subjects used by students when uploading notes.</p>
+                            </div>
+                        </div>
+
+                        <!-- Add Subject Form Card -->
+                        <div class="na-admin-card na-subject-create-card">
+                            <h3 class="na-admin-card-title">Add New Subject</h3>
+                            <p class="na-admin-card-subtitle">Subject names must be unique and will be available to all students in upload and filter dropdowns.</p>
+                            
+                            <form id="na-add-subject-form" class="na-inline-form">
+                                <div class="na-input-wrapper na-col">
+                                    <span class="na-input-icon dashicons dashicons-tag"></span>
+                                    <input type="text" id="na-new-subject-name" name="name" class="na-input" placeholder="e.g. Computer Science, Neuroscience, Thermodynamics" required>
+                                </div>
+                                <button type="submit" class="na-btn na-btn-primary" id="na-add-subject-btn">
+                                    <span class="na-btn-text">Add Subject</span>
+                                    <span class="na-btn-spinner dashicons dashicons-update na-spin" style="display:none;"></span>
+                                </button>
+                            </form>
+                            <div id="na-subject-form-msg" class="na-form-message" style="margin-top:12px;"></div>
+                        </div>
+
+                        <div class="na-results-meta">
+                            <span id="na-subjects-count">Current Subjects</span>
+                            <span class="na-results-meta-hint">Alphabetical database list. Subjects with existing notes cannot be deleted.</span>
+                        </div>
+
+                        <!-- Loading State -->
+                        <div id="na-subjects-loading" class="na-state-box na-loading-box" style="display:none;">
+                            <span class="dashicons dashicons-update na-spin na-state-icon"></span>
+                            <p class="na-state-title">Loading subjects...</p>
+                        </div>
+
+                        <!-- Empty State -->
+                        <div id="na-subjects-empty" class="na-state-box na-empty-box" style="display:none;">
+                            <div class="na-state-icon-wrap"><span class="dashicons dashicons-tag na-state-icon"></span></div>
+                            <h3 class="na-state-title">No subjects defined yet</h3>
+                            <p class="na-state-desc">Use the form above to add the first study subject.</p>
+                        </div>
+
+                        <!-- Subjects Grid / Table -->
+                        <div id="na-subjects-results" class="na-subjects-grid"></div>
+                    </section>
+                <?php endif; ?>
+
+                <?php if ( $can_users ) : ?>
+                    <!-- User Management View (Admin Only) -->
+                    <section id="na-view-users" class="na-view" style="display:none;">
+                        <div class="na-view-header">
+                            <div>
+                                <span class="na-eyebrow">Access Control & Staff</span>
+                                <h2 class="na-view-title">User Management</h2>
+                                <p class="na-view-subtitle">Search registered community members and assign Notes Adda roles (Student, Expert, Notes Adda Admin).</p>
+                            </div>
+                        </div>
+
+                        <!-- Search Box -->
+                        <div class="na-toolbar">
+                            <div class="na-search-box">
+                                <span class="dashicons dashicons-search na-search-icon"></span>
+                                <input type="search" id="na-user-search-input" placeholder="Search users by username, display name, or email" class="na-input" aria-label="Search users">
+                            </div>
+                            <button type="button" id="na-search-users-btn" class="na-btn na-btn-secondary">
+                                <span class="dashicons dashicons-search"></span>
+                                <span>Search</span>
+                            </button>
+                        </div>
+
+                        <div class="na-results-meta">
+                            <span id="na-users-count">Community Members</span>
+                            <span class="na-results-meta-hint">Roles control review powers, subject creation, and user management.</span>
+                        </div>
+
+                        <!-- Loading State -->
+                        <div id="na-users-loading" class="na-state-box na-loading-box" style="display:none;">
+                            <span class="dashicons dashicons-update na-spin na-state-icon"></span>
+                            <p class="na-state-title">Loading users...</p>
+                        </div>
+
+                        <!-- Empty State -->
+                        <div id="na-users-empty" class="na-state-box na-empty-box" style="display:none;">
+                            <div class="na-state-icon-wrap"><span class="dashicons dashicons-admin-users na-state-icon"></span></div>
+                            <h3 class="na-state-title">No users found</h3>
+                            <p class="na-state-desc">No accounts matched your search criteria.</p>
+                        </div>
+
+                        <!-- Users List / Stacked Cards on Mobile -->
+                        <div id="na-users-results" class="na-users-list"></div>
+
+                        <!-- Pagination -->
+                        <div id="na-users-pagination" class="na-pagination-container"></div>
+                    </section>
+                <?php endif; ?>
+
             </main>
         </div>
 
         <!-- Note Details Modal -->
         <div id="na-note-details-modal" class="na-modal-overlay">
-            <div class="na-modal-dialog">
+            <div class="na-modal-dialog na-modal-lg">
                 <div class="na-modal-header">
                     <h3 class="na-modal-title">Note Preview</h3>
                     <button type="button" class="na-modal-close-btn" data-modal="details" aria-label="Close modal">
@@ -304,7 +543,12 @@
                         <div class="na-form-row">
                             <div class="na-form-group na-col">
                                 <label for="na-note-subject">Subject <span class="na-required">*</span></label>
-                                <input type="text" id="na-note-subject" name="subject" class="na-input" placeholder="e.g. Computer Science" required>
+                                <select id="na-note-subject" name="subject" class="na-select" required>
+                                    <option value="">Select a Subject *</option>
+                                </select>
+                                <div id="na-no-subjects-warning" class="na-form-warning" style="display:none; margin-top:5px;">
+                                    No subjects are available yet. Ask an expert or admin to add one.
+                                </div>
                             </div>
                             <div class="na-form-group na-col">
                                 <label for="na-note-chapter">Chapter / Unit (Optional)</label>

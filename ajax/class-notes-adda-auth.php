@@ -44,11 +44,12 @@ class Notes_Adda_Auth {
 		}
 
 		$user = new WP_User( $user_id );
-		$user->set_role( 'subscriber' );
+		// Assign Student role by default
+		$user->set_role( 'notes_adda_student' );
 
 		// Create Notes Adda Profile
 		if ( class_exists( 'Notes_Adda_User_Profile' ) ) {
-			Notes_Adda_User_Profile::get_or_create( $user_id, array('college' => $college, 'bio' => $bio) );
+			Notes_Adda_User_Profile::get_or_create( $user_id, array( 'college' => $college, 'bio' => $bio ) );
 		}
 
 		// Log in

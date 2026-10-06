@@ -245,3 +245,458 @@
         padding: 32px 22px;
     }
 }
+
+/* ==================================================
+   NEW EXTENSIONS: ROLES, VERIFICATION, BOOKMARKS, SUBJECTS, USERS
+   ================================================== */
+
+/* User Meta & Role Badges */
+.na-user-meta-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-top: 2px;
+}
+.na-role-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px 7px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 650;
+    line-height: 1.2;
+}
+.na-role-student {
+    background: #f2f4f7;
+    color: var(--na-ink-soft);
+    border: 1px solid var(--na-line);
+}
+.na-role-expert {
+    background: #eff8ff;
+    color: #175cd3;
+    border: 1px solid #b2ddff;
+}
+.na-role-admin {
+    background: var(--na-brand-soft);
+    color: var(--na-brand-hover);
+    border: 1px solid #f0cbbb;
+}
+
+/* Verification Badges (Cards & Details) */
+.na-badge-verified {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    background: #ecfdf3;
+    color: #027a48;
+    border: 1px solid #a6f4c5;
+}
+.na-badge-verified .dashicons {
+    width: 14px;
+    height: 14px;
+    font-size: 14px;
+}
+.na-badge-unverified {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    background: #fff8eb;
+    color: #b54708;
+    border: 1px solid #fedf89;
+}
+.na-badge-unverified .dashicons {
+    width: 14px;
+    height: 14px;
+    font-size: 14px;
+}
+
+/* Calm Amber Community Warning Box */
+.na-unverified-warning {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    margin: 16px 0 20px;
+    padding: 14px 16px;
+    border-radius: var(--na-radius-sm);
+    background: #fffaf0;
+    border: 1px solid #fed7aa;
+    color: #7c2d12;
+}
+.na-unverified-warning .na-warning-icon {
+    flex-shrink: 0;
+    display: grid;
+    place-items: center;
+    width: 22px;
+    height: 22px;
+    color: #c2410c;
+}
+.na-unverified-warning .na-warning-icon .dashicons {
+    width: 20px;
+    height: 20px;
+    font-size: 20px;
+}
+.na-unverified-warning .na-warning-text {
+    font-size: 13.5px;
+    line-height: 1.5;
+    color: #7c2d12;
+}
+
+/* Verified info in modal */
+.na-verified-info {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 14px 0 16px;
+    padding: 10px 14px;
+    border-radius: var(--na-radius-sm);
+    background: #f6fef9;
+    border: 1px solid #a6f4c5;
+    color: #027a48;
+    font-size: 13px;
+    flex-wrap: wrap;
+}
+.na-verified-info .dashicons {
+    width: 16px;
+    height: 16px;
+    font-size: 16px;
+}
+.na-reviewer-note-text {
+    width: 100%;
+    margin-top: 4px;
+    font-style: italic;
+    color: var(--na-ink-soft);
+}
+
+/* Bookmark Buttons */
+.na-icon-btn.na-btn-bookmark.bookmarked {
+    color: var(--na-brand);
+}
+.na-btn.bookmarked {
+    background: var(--na-brand-soft);
+    border-color: #f0cbbb;
+    color: var(--na-brand-hover);
+}
+
+/* Form warning */
+.na-form-warning {
+    padding: 8px 12px;
+    border-radius: var(--na-radius-sm);
+    background: #fff8eb;
+    border: 1px solid #fedf89;
+    color: #b54708;
+    font-size: 12.5px;
+}
+
+/* Review Filter Tabs */
+.na-review-filter-tabs {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 24px;
+    border-bottom: 1px solid var(--na-line);
+    padding-bottom: 12px;
+    overflow-x: auto;
+}
+.na-tab-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 14px;
+    border: 1px solid transparent;
+    border-radius: var(--na-radius-sm);
+    background: transparent;
+    color: var(--na-muted);
+    font: 600 13px/1 var(--na-font-sans);
+    cursor: pointer;
+    transition: var(--na-transition);
+    white-space: nowrap;
+}
+.na-tab-btn .dashicons {
+    width: 16px;
+    height: 16px;
+    font-size: 16px;
+}
+.na-tab-btn:hover {
+    background: var(--na-surface-subtle);
+    color: var(--na-ink);
+}
+.na-tab-btn.active {
+    background: var(--na-brand-soft);
+    color: var(--na-brand-hover);
+    border-color: #f0cbbb;
+}
+
+/* Review List & Cards */
+.na-review-list {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+.na-review-card {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 20px;
+    padding: 22px 24px;
+    border: 1px solid var(--na-line);
+    border-radius: var(--na-radius-md);
+    background: var(--na-surface);
+    box-shadow: var(--na-shadow-sm);
+    transition: var(--na-transition);
+}
+.na-review-card:hover {
+    border-color: #ecc7b7;
+    box-shadow: var(--na-shadow-md);
+}
+.na-review-card.unverified-card {
+    border-left: 4px solid #f59e0b;
+}
+.na-review-card.verified-card {
+    border-left: 4px solid #10b981;
+}
+.na-review-card-main {
+    flex: 1;
+    min-width: 0;
+}
+.na-review-card-title {
+    font-size: 17px;
+    font-weight: 700;
+    margin: 8px 0 6px;
+    color: var(--na-ink);
+}
+.na-review-card-desc {
+    color: var(--na-muted);
+    font-size: 13.5px;
+    line-height: 1.5;
+    margin-bottom: 10px;
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+}
+.na-review-card-meta {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--na-muted);
+    font-size: 12px;
+    flex-wrap: wrap;
+}
+.na-review-card-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+/* Admin Cards & Forms */
+.na-admin-card {
+    padding: 26px 28px;
+    border: 1px solid var(--na-line);
+    border-radius: var(--na-radius-md);
+    background: var(--na-surface);
+    box-shadow: var(--na-shadow-sm);
+    margin-bottom: 30px;
+}
+.na-admin-card-title {
+    font-size: 17px;
+    font-weight: 700;
+    margin-bottom: 4px;
+    color: var(--na-ink);
+}
+.na-admin-card-subtitle {
+    color: var(--na-muted);
+    font-size: 13.5px;
+    margin-bottom: 18px;
+}
+.na-inline-form {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+}
+
+/* Admin Tables (Subjects & Users) */
+.na-subjects-table-wrapper, .na-users-table-wrapper {
+    overflow-x: auto;
+    border: 1px solid var(--na-line);
+    border-radius: var(--na-radius-md);
+    background: var(--na-surface);
+    box-shadow: var(--na-shadow-sm);
+}
+.na-admin-table {
+    width: 100%;
+    border-collapse: collapse;
+    text-align: left;
+    font-size: 14px;
+}
+.na-admin-table th {
+    padding: 14px 18px;
+    background: var(--na-surface-subtle);
+    color: var(--na-ink-soft);
+    font-weight: 650;
+    font-size: 12.5px;
+    border-bottom: 1px solid var(--na-line);
+    text-transform: uppercase;
+    letter-spacing: .04em;
+}
+.na-admin-table td {
+    padding: 14px 18px;
+    border-bottom: 1px solid var(--na-line);
+    color: var(--na-ink-soft);
+    vertical-align: middle;
+}
+.na-admin-table tr:last-child td {
+    border-bottom: 0;
+}
+.na-admin-table tr:hover td {
+    background: rgba(250, 246, 242, 0.6);
+}
+.na-code-slug {
+    display: inline-block;
+    padding: 2px 6px;
+    border-radius: 4px;
+    background: #f2f4f7;
+    color: var(--na-ink-soft);
+    font-size: 12px;
+    font-family: monospace;
+}
+.na-count-badge {
+    display: inline-block;
+    padding: 3px 8px;
+    border-radius: 999px;
+    background: var(--na-surface-subtle);
+    color: var(--na-muted);
+    font-size: 12px;
+    font-weight: 600;
+}
+.na-count-badge.active {
+    background: var(--na-brand-soft);
+    color: var(--na-brand-hover);
+}
+
+/* User Table Elements */
+.na-user-row-info {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+.na-row-avatar {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    object-fit: cover;
+}
+.na-row-name {
+    font-weight: 650;
+    color: var(--na-ink);
+}
+.na-row-handle {
+    font-size: 12px;
+    color: var(--na-muted);
+}
+.na-self-badge {
+    font-size: 11px;
+    color: var(--na-brand);
+    font-weight: 600;
+    margin-left: 4px;
+}
+.na-self-row td {
+    background: rgba(255, 240, 233, 0.25);
+}
+.na-users-table .na-user-role-select {
+    min-height: 36px;
+    padding: 6px 10px;
+    font-size: 13px;
+    width: 170px;
+}
+
+/* Mobile Stacked User Cards */
+.na-users-mobile-cards {
+    display: none;
+    flex-direction: column;
+    gap: 14px;
+}
+.na-user-mobile-card {
+    padding: 18px;
+    border: 1px solid var(--na-line);
+    border-radius: var(--na-radius-md);
+    background: var(--na-surface);
+    box-shadow: var(--na-shadow-sm);
+}
+.na-user-mobile-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 12px;
+}
+.na-user-mobile-meta {
+    display: grid;
+    gap: 6px;
+    font-size: 13px;
+    color: var(--na-ink-soft);
+    margin-bottom: 14px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--na-line);
+}
+.na-user-mobile-role {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+}
+.na-user-mobile-role label {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--na-ink-soft);
+}
+.na-user-mobile-role .na-user-role-select {
+    flex: 1;
+    max-width: 200px;
+}
+
+/* Toast */
+.na-toast {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    z-index: 10000;
+    padding: 12px 20px;
+    border-radius: var(--na-radius-sm);
+    background: #1d2939;
+    color: #fff;
+    font-size: 14px;
+    font-weight: 500;
+    box-shadow: var(--na-shadow-md);
+    opacity: 0;
+    transform: translateY(12px);
+    transition: opacity .25s ease, transform .25s ease;
+    pointer-events: none;
+}
+.na-toast.show {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+/* Responsive adjustments */
+@media (max-width: 800px) {
+    .na-review-card {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    .na-review-card-actions {
+        width: 100%;
+        justify-content: flex-start;
+        padding-top: 12px;
+        border-top: 1px solid var(--na-line);
+    }
+    .na-inline-form {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    .na-users-table-wrapper {
+        display: none;
+    }
+    .na-users-mobile-cards {
+        display: flex;
+    }
+}
