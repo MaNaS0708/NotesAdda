@@ -14,6 +14,9 @@
         activeView: 'library',
         subjects: [],
         reviewFilter: 'unverified',
+        subjectRequestFilter: 'pending',
+        adminSubjectRequests: [],
+        mySubjectRequests: [],
         userSearchTerm: '',
         userPage: 1,
 
@@ -25,6 +28,9 @@
             if (NotesAdda.is_logged_in) {
                 this.loadSubjects();
                 this.loadNotes(this.activeView);
+                if (NotesAdda.can_manage_subjects) {
+                    this.loadAdminSubjectRequests();
+                }
             }
         },
 
@@ -329,6 +335,65 @@
                 }
             });
 
+            // Subject Requests Triggers & Modal Subtabs
+            $(document).on('click', '.na-request-subject-trigger, #na-request-subject-link', function(e) {
+                e.preventDefault();
+                self.openSubjectRequestModal();
+            });
+
+            $('#na-subject-request-modal .na-modal-tab-btn').on('click', function(e) {
+                e.preventDefault();
+                const subtab = $(this).data('subtab');
+                $('#na-subject-request-modal .na-modal-tab-btn').removeClass('active');
+                $(this).addClass('active');
+
+                $('#na-subject-request-modal .na-modal-subtab-pane').removeClass('active').hide();
+                $('#na-subtab-' + subtab).addClass('active').show();
+
+                if (subtab === 'my-requests') {
+                    self.loadMySubjectRequests();
+                }
+            });
+
+            // Subject Request Form Submit
+            $('#na-subject-request-form').on('submit', function(e) {
+                e.preventDefault();
+                self.submitSubjectRequest();
+            });
+
+            // Admin Subject Requests Filters
+            $(document).on('click', '#na-view-subject-requests .na-review-filter-tabs .na-tab-btn', function(e) {
+                e.preventDefault();
+                $('#na-view-subject-requests .na-review-filter-tabs .na-tab-btn').removeClass('active');
+                $(this).addClass('active');
+                self.subjectRequestFilter = $(this).data('subject-req-status');
+                self.renderAdminSubjectRequests();
+            });
+
+            // Admin Subject Request Action Buttons
+            $(document).on('click', '.na-btn-approve-subject-req', function(e) {
+                e.preventDefault();
+                const id = $(this).data('id');
+                const name = $(this).data('name');
+                self.approveSubjectRequest(id, name, $(this));
+            });
+
+            $(document).on('click', '.na-btn-reject-subject-req', function(e) {
+                e.preventDefault();
+                const id = $(this).data('id');
+                const name = $(this).data('name');
+                self.rejectSubjectRequest(id, name, $(this));
+            });
+
+            $(document).on('click', '.na-btn-delete-subject-req', function(e) {
+                e.preventDefault();
+                const id = $(this).data('id');
+                const name = $(this).data('name');
+                if (confirm(`Are you sure you want to delete the request for "${name}"?`)) {
+                    self.deleteSubjectRequest(id, $(this));
+                }
+            });
+
             // User Management Search
             $('#na-search-users-btn').on('click', function() {
                 self.userPage = 1;
@@ -375,6 +440,8 @@
                 this.loadNotes(view);
             } else if (view === 'review-queue') {
                 this.loadReviewQueue();
+            } else if (view === 'subject-requests') {
+                this.loadAdminSubjectRequests();
             } else if (view === 'subjects') {
                 this.renderSubjectsView();
             } else if (view === 'users') {
@@ -1333,6 +1400,419 @@
                 }
             }).fail(function(xhr) {
                 const err = xhr.responseJSON && xhr.responseJSON.data ? xhr.responseJSON.data.message : 'Error deleting subject.';
+                alert(err);
+            });
+        },
+
+        /* ==================================================
+           SUBJECT REQUESTS (STUDENT, EXPERT, ADMIN)
+           ================================================== */
+        openSubjectRequestModal: function() {
+            $('#na-req-subject-name').val('');
+            $('#na-req-subject-reason').val('');
+            $('#na-subject-request-msg').text('').removeClass('error success');
+
+            // Default to first subtab
+            $('#na-subject-request-modal .na-modal-tab-btn').removeClass('active');
+            $('#na-subject-request-modal .na-modal-tab-btn[data-subtab="new-request"]').addClass('active');
+            $('#na-subject-request-modal .na-modal-subtab-pane').removeClass('active').hide();
+            $('#na-subtab-new-request').addClass('active').show();
+
+            $('#na-subject-request-modal').addClass('open');
+            this.loadMySubjectRequests(true);
+        },
+
+        submitSubjectRequest: function() {
+            const self = this;
+            const $nameInput = $('#na-req-subject-name');
+            const $reasonInput = $('#na-req-subject-reason');
+            const $btn = $('#na-submit-subject-req-btn');
+            const $msg = $('#na-subject-request-msg');
+
+            const name = $nameInput.val().trim();
+            const reason = $reasonInput.val().trim();
+
+            $msg.text('').removeClass('error success');
+
+            if (!name) {
+                $msg.text('Please enter a requested subject name.').addClass('error');
+                return;
+            }
+
+            $btn.prop('disabled', true);
+            $btn.find('.na-btn-spinner').show();
+            $btn.find('.na-btn-text').text('Submitting...');
+
+            $.post(NotesAdda.ajax_url, {
+                action: 'notes_adda_request_subject',
+                name: name,
+                reason: reason,
+                _ajax_nonce: NotesAdda.nonce
+            }, function(res) {
+                $btn.prop('disabled', false);
+                $btn.find('.na-btn-spinner').hide();
+                $btn.find('.na-btn-text').text('Submit Request');
+
+                if (res.success) {
+                    $nameInput.val('');
+                    $reasonInput.val('');
+                    $msg.text(`Request for "${res.data.requested_name}" submitted successfully! You can track its status under "My Requests".`).addClass('success');
+                    self.loadMySubjectRequests();
+                } else {
+                    $msg.text(res.data ? res.data.message : 'Could not submit subject request.').addClass('error');
+                }
+            }).fail(function(xhr) {
+                $btn.prop('disabled', false);
+                $btn.find('.na-btn-spinner').hide();
+                $btn.find('.na-btn-text').text('Submit Request');
+                const err = xhr.responseJSON && xhr.responseJSON.data ? xhr.responseJSON.data.message : 'An error occurred submitting the request.';
+                $msg.text(err).addClass('error');
+            });
+        },
+
+        loadMySubjectRequests: function(quiet) {
+            const self = this;
+            const $loading = $('#na-my-requests-loading');
+            const $empty = $('#na-my-requests-empty');
+            const $list = $('#na-my-requests-list');
+            const $badge = $('#na-my-requests-badge');
+
+            if (!quiet) {
+                $list.empty();
+                $empty.hide();
+                $loading.show();
+            }
+
+            $.get(NotesAdda.ajax_url, {
+                action: 'notes_adda_get_my_subject_requests',
+                _ajax_nonce: NotesAdda.nonce
+            }, function(res) {
+                $loading.hide();
+                if (res.success && Array.isArray(res.data)) {
+                    self.mySubjectRequests = res.data;
+                    if (res.data.length > 0) {
+                        $badge.text(res.data.length).show();
+                        self.renderMySubjectRequests(res.data, $list);
+                        $empty.hide();
+                    } else {
+                        $badge.hide();
+                        $list.empty();
+                        $empty.show();
+                    }
+                } else {
+                    $empty.show();
+                }
+            }).fail(function() {
+                $loading.hide();
+            });
+        },
+
+        renderMySubjectRequests: function(requests, $container) {
+            const self = this;
+            $container.empty();
+
+            const html = `
+                <div class="na-my-reqs-stack">
+                    ${requests.map(function(r) {
+                        let statusBadge = '';
+                        if (r.status === 'approved') {
+                            statusBadge = '<span class="na-status-badge na-status-approved"><span class="dashicons dashicons-yes-alt"></span> Approved</span>';
+                        } else if (r.status === 'rejected') {
+                            statusBadge = '<span class="na-status-badge na-status-rejected"><span class="dashicons dashicons-dismiss"></span> Rejected</span>';
+                        } else {
+                            statusBadge = '<span class="na-status-badge na-status-pending"><span class="dashicons dashicons-clock"></span> Pending Review</span>';
+                        }
+
+                        return `
+                            <div class="na-my-req-item">
+                                <div class="na-my-req-header">
+                                    <h4 class="na-my-req-title">${self.escapeHtml(r.requested_name)}</h4>
+                                    ${statusBadge}
+                                </div>
+                                ${r.reason ? `<p class="na-my-req-reason">"${self.escapeHtml(r.reason)}"</p>` : ''}
+                                <div class="na-my-req-meta">
+                                    <span>Requested on ${self.formatDate(r.created_at)}</span>
+                                    ${r.reviewed_at ? `<span>• Reviewed on ${self.formatDate(r.reviewed_at)}</span>` : ''}
+                                </div>
+                            </div>
+                        `;
+                    }).join('')}
+                </div>
+            `;
+
+            $container.html(html);
+        },
+
+        /* ==================================================
+           ADMIN SUBJECT REQUESTS GOVERNANCE
+           ================================================== */
+        loadAdminSubjectRequests: function() {
+            const self = this;
+            const $container = $('#na-subject-requests-results');
+            const $loading = $('#na-subject-requests-loading');
+            const $empty = $('#na-subject-requests-empty');
+            const $count = $('#na-subject-requests-count');
+            const $badge = $('#na-pending-requests-badge');
+
+            $container.empty();
+            $empty.hide();
+            $loading.show();
+            $count.text('Loading subject requests...');
+
+            $.get(NotesAdda.ajax_url, {
+                action: 'notes_adda_get_subject_requests',
+                _ajax_nonce: NotesAdda.nonce
+            }, function(res) {
+                $loading.hide();
+                if (res.success && Array.isArray(res.data)) {
+                    self.adminSubjectRequests = res.data;
+
+                    // Update pending badge
+                    const pendingCount = res.data.filter(function(r) { return r.status === 'pending'; }).length;
+                    if (pendingCount > 0) {
+                        $badge.text(pendingCount).show();
+                    } else {
+                        $badge.hide();
+                    }
+
+                    self.renderAdminSubjectRequests();
+                } else {
+                    $count.text('Error loading requests');
+                    $empty.show();
+                }
+            }).fail(function() {
+                $loading.hide();
+                $count.text('Error loading requests');
+                $container.html('<div class="na-state-box"><p style="color:var(--na-danger);">Failed to load subject requests.</p></div>');
+            });
+        },
+
+        renderAdminSubjectRequests: function() {
+            const self = this;
+            const $container = $('#na-subject-requests-results');
+            const $empty = $('#na-subject-requests-empty');
+            const $count = $('#na-subject-requests-count');
+
+            let filtered = self.adminSubjectRequests;
+            if (self.subjectRequestFilter !== 'all') {
+                filtered = self.adminSubjectRequests.filter(function(r) {
+                    return r.status === self.subjectRequestFilter;
+                });
+            }
+
+            $container.empty();
+
+            if (!filtered || filtered.length === 0) {
+                $count.text('0 Requests Found');
+                $empty.show();
+                return;
+            }
+
+            $empty.hide();
+            $count.text(filtered.length === 1 ? '1 Request Found' : filtered.length + ' Requests Found');
+
+            const html = `
+                <div class="na-subjects-table-wrapper">
+                    <table class="na-admin-table na-subject-requests-table">
+                        <thead>
+                            <tr>
+                                <th>Requested Subject</th>
+                                <th>Requester</th>
+                                <th>Reason / Note</th>
+                                <th>Submitted Date</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${filtered.map(function(r) {
+                                const isPending = (r.status === 'pending');
+                                const isApproved = (r.status === 'approved');
+                                const isRejected = (r.status === 'rejected');
+
+                                let statusBadge = '';
+                                if (isApproved) {
+                                    statusBadge = '<span class="na-status-badge na-status-approved"><span class="dashicons dashicons-yes-alt"></span> Approved</span>';
+                                } else if (isRejected) {
+                                    statusBadge = '<span class="na-status-badge na-status-rejected"><span class="dashicons dashicons-dismiss"></span> Rejected</span>';
+                                } else {
+                                    statusBadge = '<span class="na-status-badge na-status-pending"><span class="dashicons dashicons-clock"></span> Pending</span>';
+                                }
+
+                                return `
+                                    <tr>
+                                        <td>
+                                            <strong class="na-req-item-name">${self.escapeHtml(r.requested_name)}</strong>
+                                            <div style="font-size:12px; color:var(--na-muted); margin-top:2px;">Slug: <code>${self.escapeHtml(r.requested_slug)}</code></div>
+                                        </td>
+                                        <td>
+                                            <div class="na-requester-info">
+                                                <span class="na-requester-name">${self.escapeHtml(r.requester_name || r.requester_login || 'User')}</span>
+                                                <span class="na-requester-sub">@${self.escapeHtml(r.requester_login || '')}</span>
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <div class="na-req-reason-cell">
+                                                ${r.reason ? self.escapeHtml(r.reason) : '<span style="color:var(--na-muted); font-style:italic;">None provided</span>'}
+                                            </div>
+                                        </td>
+                                        <td>${self.formatDate(r.created_at)}</td>
+                                        <td>
+                                            ${statusBadge}
+                                            ${r.reviewer_name ? `
+                                                <div style="font-size:11px; color:var(--na-muted); margin-top:4px;">
+                                                    By ${self.escapeHtml(r.reviewer_name)}
+                                                </div>
+                                            ` : ''}
+                                        </td>
+                                        <td>
+                                            <div class="na-req-actions-group">
+                                                ${isPending ? `
+                                                    <button type="button" class="na-btn na-btn-primary na-btn-sm na-btn-approve-subject-req" data-id="${r.id}" data-name="${self.escapeHtml(r.requested_name)}" title="Approve and create subject">
+                                                        <span class="dashicons dashicons-yes"></span> Approve
+                                                    </button>
+                                                    <button type="button" class="na-btn na-btn-secondary na-btn-sm na-btn-reject-subject-req" data-id="${r.id}" data-name="${self.escapeHtml(r.requested_name)}" title="Reject request">
+                                                        <span class="dashicons dashicons-no-alt"></span> Reject
+                                                    </button>
+                                                ` : ''}
+                                                <button type="button" class="na-btn na-btn-danger na-btn-sm na-btn-delete-subject-req" data-id="${r.id}" data-name="${self.escapeHtml(r.requested_name)}" title="Delete request record">
+                                                    <span class="dashicons dashicons-trash"></span>
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                `;
+                            }).join('')}
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Responsive Mobile Stacked Cards -->
+                <div class="na-subject-req-mobile-cards">
+                    ${filtered.map(function(r) {
+                        const isPending = (r.status === 'pending');
+                        const isApproved = (r.status === 'approved');
+                        const isRejected = (r.status === 'rejected');
+
+                        let statusBadge = '';
+                        if (isApproved) {
+                            statusBadge = '<span class="na-status-badge na-status-approved"><span class="dashicons dashicons-yes-alt"></span> Approved</span>';
+                        } else if (isRejected) {
+                            statusBadge = '<span class="na-status-badge na-status-rejected"><span class="dashicons dashicons-dismiss"></span> Rejected</span>';
+                        } else {
+                            statusBadge = '<span class="na-status-badge na-status-pending"><span class="dashicons dashicons-clock"></span> Pending</span>';
+                        }
+
+                        return `
+                            <div class="na-subject-req-card">
+                                <div class="na-subject-req-card-header">
+                                    <div>
+                                        <h4 class="na-subject-req-card-title">${self.escapeHtml(r.requested_name)}</h4>
+                                        <span class="na-requester-sub">By ${self.escapeHtml(r.requester_name || r.requester_login || 'User')} (@${self.escapeHtml(r.requester_login || '')})</span>
+                                    </div>
+                                    <div>${statusBadge}</div>
+                                </div>
+                                ${r.reason ? `<p class="na-subject-req-card-reason">${self.escapeHtml(r.reason)}</p>` : ''}
+                                <div class="na-subject-req-card-meta">
+                                    <span>Submitted ${self.formatDate(r.created_at)}</span>
+                                    ${r.reviewer_name ? `<span>• Reviewed by ${self.escapeHtml(r.reviewer_name)}</span>` : ''}
+                                </div>
+                                <div class="na-subject-req-card-actions">
+                                    ${isPending ? `
+                                        <button type="button" class="na-btn na-btn-primary na-btn-sm na-btn-approve-subject-req" data-id="${r.id}" data-name="${self.escapeHtml(r.requested_name)}">
+                                            <span class="dashicons dashicons-yes"></span> Approve & Add
+                                        </button>
+                                        <button type="button" class="na-btn na-btn-secondary na-btn-sm na-btn-reject-subject-req" data-id="${r.id}" data-name="${self.escapeHtml(r.requested_name)}">
+                                            <span class="dashicons dashicons-no-alt"></span> Reject
+                                        </button>
+                                    ` : ''}
+                                    <button type="button" class="na-btn na-btn-danger na-btn-sm na-btn-delete-subject-req" data-id="${r.id}" data-name="${self.escapeHtml(r.requested_name)}">
+                                        <span class="dashicons dashicons-trash"></span> Delete
+                                    </button>
+                                </div>
+                            </div>
+                        `;
+                    }).join('')}
+                </div>
+            `;
+
+            $container.html(html);
+        },
+
+        approveSubjectRequest: function(id, name, $btn) {
+            const self = this;
+            if ($btn) {
+                $btn.prop('disabled', true);
+            }
+
+            $.post(NotesAdda.ajax_url, {
+                action: 'notes_adda_approve_subject_request',
+                id: id,
+                _ajax_nonce: NotesAdda.nonce
+            }, function(res) {
+                if (res.success) {
+                    // Instantly refresh subjects in dropdowns and memory
+                    self.loadSubjects(function() {
+                        if (self.activeView === 'subjects') {
+                            self.renderSubjectsView();
+                        }
+                    });
+                    self.loadAdminSubjectRequests();
+                } else {
+                    if ($btn) $btn.prop('disabled', false);
+                    alert(res.data ? res.data.message : 'Could not approve subject request.');
+                }
+            }).fail(function(xhr) {
+                if ($btn) $btn.prop('disabled', false);
+                const err = xhr.responseJSON && xhr.responseJSON.data ? xhr.responseJSON.data.message : 'Error approving subject request.';
+                alert(err);
+            });
+        },
+
+        rejectSubjectRequest: function(id, name, $btn) {
+            const self = this;
+            if ($btn) {
+                $btn.prop('disabled', true);
+            }
+
+            $.post(NotesAdda.ajax_url, {
+                action: 'notes_adda_reject_subject_request',
+                id: id,
+                _ajax_nonce: NotesAdda.nonce
+            }, function(res) {
+                if (res.success) {
+                    self.loadAdminSubjectRequests();
+                } else {
+                    if ($btn) $btn.prop('disabled', false);
+                    alert(res.data ? res.data.message : 'Could not reject subject request.');
+                }
+            }).fail(function(xhr) {
+                if ($btn) $btn.prop('disabled', false);
+                const err = xhr.responseJSON && xhr.responseJSON.data ? xhr.responseJSON.data.message : 'Error rejecting subject request.';
+                alert(err);
+            });
+        },
+
+        deleteSubjectRequest: function(id, $btn) {
+            const self = this;
+            if ($btn) {
+                $btn.prop('disabled', true);
+            }
+
+            $.post(NotesAdda.ajax_url, {
+                action: 'notes_adda_delete_subject_request',
+                id: id,
+                _ajax_nonce: NotesAdda.nonce
+            }, function(res) {
+                if (res.success) {
+                    self.loadAdminSubjectRequests();
+                } else {
+                    if ($btn) $btn.prop('disabled', false);
+                    alert(res.data ? res.data.message : 'Could not delete subject request.');
+                }
+            }).fail(function(xhr) {
+                if ($btn) $btn.prop('disabled', false);
+                const err = xhr.responseJSON && xhr.responseJSON.data ? xhr.responseJSON.data.message : 'Error deleting subject request.';
                 alert(err);
             });
         },

@@ -166,6 +166,13 @@
                             <?php endif; ?>
                             <?php if ( $can_subjects ) : ?>
                                 <li>
+                                    <a href="#subject-requests" class="na-nav-item" data-view="subject-requests">
+                                        <span class="dashicons dashicons-clipboard"></span>
+                                        <span class="na-nav-text">Subject Requests</span>
+                                        <span id="na-pending-requests-badge" class="na-nav-counter-badge" style="display:none;">0</span>
+                                    </a>
+                                </li>
+                                <li>
                                     <a href="#subjects" class="na-nav-item" data-view="subjects">
                                         <span class="dashicons dashicons-tag"></span>
                                         <span class="na-nav-text">Subject Management</span>
@@ -406,6 +413,58 @@
                 <?php endif; ?>
 
                 <?php if ( $can_subjects ) : ?>
+                    <!-- Subject Requests View (Admin Only) -->
+                    <section id="na-view-subject-requests" class="na-view" style="display:none;">
+                        <div class="na-view-header">
+                            <div>
+                                <span class="na-eyebrow">Taxonomy Governance</span>
+                                <h2 class="na-view-title">Subject Requests</h2>
+                                <p class="na-view-subtitle">Review student and expert requests for new study subjects. Approved subjects are instantly added to the active catalog.</p>
+                            </div>
+                        </div>
+
+                        <!-- Subject Request Filter Tabs -->
+                        <div class="na-review-filter-tabs">
+                            <button type="button" class="na-tab-btn active" data-subject-req-status="pending">
+                                <span class="dashicons dashicons-clock"></span>
+                                <span>Pending Requests</span>
+                            </button>
+                            <button type="button" class="na-tab-btn" data-subject-req-status="all">
+                                <span class="dashicons dashicons-list-view"></span>
+                                <span>All Requests</span>
+                            </button>
+                            <button type="button" class="na-tab-btn" data-subject-req-status="approved">
+                                <span class="dashicons dashicons-yes-alt"></span>
+                                <span>Approved</span>
+                            </button>
+                            <button type="button" class="na-tab-btn" data-subject-req-status="rejected">
+                                <span class="dashicons dashicons-dismiss"></span>
+                                <span>Rejected</span>
+                            </button>
+                        </div>
+
+                        <div class="na-results-meta">
+                            <span id="na-subject-requests-count">Subject requests awaiting review</span>
+                            <span class="na-results-meta-hint">Approving a request creates the subject in the active catalog immediately.</span>
+                        </div>
+
+                        <!-- Loading State -->
+                        <div id="na-subject-requests-loading" class="na-state-box na-loading-box" style="display:none;">
+                            <span class="dashicons dashicons-update na-spin na-state-icon"></span>
+                            <p class="na-state-title">Loading subject requests...</p>
+                        </div>
+
+                        <!-- Empty State -->
+                        <div id="na-subject-requests-empty" class="na-state-box na-empty-box" style="display:none;">
+                            <div class="na-state-icon-wrap"><span class="dashicons dashicons-yes-alt na-state-icon"></span></div>
+                            <h3 class="na-state-title">No requests found</h3>
+                            <p class="na-state-desc">There are no subject requests matching the selected filter.</p>
+                        </div>
+
+                        <!-- Subject Requests Table / Cards -->
+                        <div id="na-subject-requests-results" class="na-subject-requests-list"></div>
+                    </section>
+
                     <!-- Subject Management View -->
                     <section id="na-view-subjects" class="na-view" style="display:none;">
                         <div class="na-view-header">
@@ -544,12 +603,17 @@
 
                         <div class="na-form-row">
                             <div class="na-form-group na-col">
-                                <label for="na-note-subject">Subject <span class="na-required">*</span></label>
+                                <div class="na-label-with-action">
+                                    <label for="na-note-subject">Subject <span class="na-required">*</span></label>
+                                    <button type="button" class="na-btn-link na-request-subject-trigger" id="na-request-subject-link">
+                                        <span class="dashicons dashicons-plus"></span> Request a new subject
+                                    </button>
+                                </div>
                                 <select id="na-note-subject" name="subject" class="na-select" required>
                                     <option value="">Select a Subject *</option>
                                 </select>
                                 <div id="na-no-subjects-warning" class="na-form-warning" style="display:none; margin-top:5px;">
-                                    No subjects are available yet. Ask an expert or admin to add one.
+                                    No subjects are available yet. <button type="button" class="na-btn-link na-request-subject-trigger">Request a new subject</button> to get started.
                                 </div>
                             </div>
                             <div class="na-form-group na-col">
@@ -605,6 +669,68 @@
                             </button>
                         </div>
                     </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Subject Request Modal (Student / Expert / Admin) -->
+        <div id="na-subject-request-modal" class="na-modal-overlay">
+            <div class="na-modal-dialog">
+                <div class="na-modal-header">
+                    <h3 class="na-modal-title">Subject Request</h3>
+                    <button type="button" class="na-modal-close-btn" data-modal="subject-request" aria-label="Close modal">
+                        <span class="dashicons dashicons-no-alt"></span>
+                    </button>
+                </div>
+                <div class="na-modal-body">
+                    <!-- Modal Subtabs -->
+                    <div class="na-modal-tabs">
+                        <button type="button" class="na-modal-tab-btn active" data-subtab="new-request">
+                            <span class="dashicons dashicons-plus-alt"></span> Request New Subject
+                        </button>
+                        <button type="button" class="na-modal-tab-btn" data-subtab="my-requests" id="na-my-requests-tab-btn">
+                            <span class="dashicons dashicons-list-view"></span> My Requests <span id="na-my-requests-badge" class="na-subtab-badge" style="display:none;">0</span>
+                        </button>
+                    </div>
+
+                    <!-- Tab 1: New Request Form -->
+                    <div id="na-subtab-new-request" class="na-modal-subtab-pane active">
+                        <form id="na-subject-request-form" class="na-form" style="margin-top:16px;">
+                            <div class="na-form-group">
+                                <label for="na-req-subject-name">Requested Subject Name <span class="na-required">*</span></label>
+                                <input type="text" id="na-req-subject-name" name="name" class="na-input" placeholder="e.g. Computer Graphics, Biochemistry" required autocomplete="off">
+                            </div>
+
+                            <div class="na-form-group">
+                                <label for="na-req-subject-reason">Reason or Note <span class="na-label-hint">(Optional)</span></label>
+                                <textarea id="na-req-subject-reason" name="reason" class="na-input na-textarea" rows="2" placeholder="Course title, syllabus code, or why this subject is needed..."></textarea>
+                            </div>
+
+                            <div id="na-subject-request-msg" class="na-form-message"></div>
+
+                            <div class="na-modal-footer" style="padding:0; margin-top:20px;">
+                                <button type="button" class="na-btn na-btn-ghost na-modal-close-btn" data-modal="subject-request">Cancel</button>
+                                <button type="submit" class="na-btn na-btn-primary" id="na-submit-subject-req-btn">
+                                    <span class="na-btn-text">Submit Request</span>
+                                    <span class="na-btn-spinner dashicons dashicons-update na-spin" style="display:none;"></span>
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+
+                    <!-- Tab 2: My Requests List -->
+                    <div id="na-subtab-my-requests" class="na-modal-subtab-pane" style="display:none; margin-top:16px;">
+                        <div id="na-my-requests-loading" class="na-state-box na-loading-box" style="padding:20px; display:none;">
+                            <span class="dashicons dashicons-update na-spin na-state-icon"></span>
+                            <p class="na-state-title">Loading your requests...</p>
+                        </div>
+                        <div id="na-my-requests-empty" class="na-state-box na-empty-box" style="padding:24px; display:none;">
+                            <div class="na-state-icon-wrap"><span class="dashicons dashicons-tag na-state-icon"></span></div>
+                            <h3 class="na-state-title" style="font-size:15px;">No requests submitted yet</h3>
+                            <p class="na-state-desc" style="font-size:13px;">When you request new study subjects, track their approval status here.</p>
+                        </div>
+                        <div id="na-my-requests-list" class="na-my-requests-list"></div>
+                    </div>
                 </div>
             </div>
         </div>

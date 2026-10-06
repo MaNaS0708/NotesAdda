@@ -46,11 +46,12 @@ class Notes_Adda_Frontend {
 			$owner_id     = (int) get_option( 'notes_adda_owner_id' );
 			$is_owner     = ( $is_logged_in && $owner_id > 0 && (int) $current_user->ID === $owner_id );
 
-			$can_upload          = $is_logged_in && ( $is_owner || current_user_can( 'notes_adda_upload_notes' ) || current_user_can( 'manage_options' ) );
-			$can_review          = $is_logged_in && ( $is_owner || current_user_can( 'notes_adda_review_notes' ) || current_user_can( 'manage_options' ) );
-			$can_manage_subjects = $is_logged_in && ( $is_owner || current_user_can( 'notes_adda_manage_subjects' ) || current_user_can( 'manage_options' ) );
-			$can_manage_users    = $is_logged_in && ( $is_owner || current_user_can( 'notes_adda_manage_users' ) || current_user_can( 'manage_options' ) );
-			$can_manage_all      = $is_logged_in && ( $is_owner || current_user_can( 'notes_adda_manage_all_notes' ) || current_user_can( 'manage_options' ) );
+			$can_upload           = $is_logged_in && ( $is_owner || current_user_can( 'notes_adda_upload_notes' ) || current_user_can( 'manage_options' ) );
+			$can_review           = $is_logged_in && ( $is_owner || current_user_can( 'notes_adda_review_notes' ) || current_user_can( 'manage_options' ) );
+			$can_request_subjects = $is_logged_in && ( $is_owner || current_user_can( 'notes_adda_request_subjects' ) || current_user_can( 'manage_options' ) );
+			$can_manage_subjects  = $is_logged_in && ( $is_owner || current_user_can( 'notes_adda_manage_subjects' ) || current_user_can( 'manage_options' ) );
+			$can_manage_users     = $is_logged_in && ( $is_owner || current_user_can( 'notes_adda_manage_users' ) || current_user_can( 'manage_options' ) );
+			$can_manage_all       = $is_logged_in && ( $is_owner || current_user_can( 'notes_adda_manage_all_notes' ) || current_user_can( 'manage_options' ) );
 
 			$app_role = 'student';
 			$role_label = 'Student';
@@ -81,6 +82,7 @@ class Notes_Adda_Frontend {
 					'role_label'           => $role_label,
 					'can_upload'           => $can_upload,
 					'can_review'           => $can_review,
+					'can_request_subjects' => $can_request_subjects,
 					'can_manage_subjects'  => $can_manage_subjects,
 					'can_manage_users'     => $can_manage_users,
 					'can_manage_all_notes' => $can_manage_all,

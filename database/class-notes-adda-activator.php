@@ -30,6 +30,7 @@ class Notes_Adda_Activator {
 		$profiles_table  = $wpdb->prefix . 'notes_adda_profiles';
 		$subjects_table  = $wpdb->prefix . 'notes_adda_subjects';
 		$bookmarks_table = $wpdb->prefix . 'notes_adda_bookmarks';
+		$subject_requests_table = $wpdb->prefix . 'notes_adda_subject_requests';
 
 		require_once ABSPATH . 'wp-admin/includes/upgrade.php';
 
@@ -129,6 +130,23 @@ class Notes_Adda_Activator {
 				PRIMARY KEY (user_id, note_id),
 				KEY note_id (note_id),
 				KEY user_id (user_id)
+			) $charset_collate;",
+
+			"CREATE TABLE $subject_requests_table (
+				id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+				requested_name varchar(100) NOT NULL,
+				requested_slug varchar(120) NOT NULL,
+				requester_id bigint(20) unsigned NOT NULL,
+				reason text NOT NULL,
+				status varchar(20) NOT NULL DEFAULT 'pending',
+				reviewed_by bigint(20) unsigned DEFAULT NULL,
+				reviewed_at datetime DEFAULT NULL,
+				created_at datetime NOT NULL,
+				updated_at datetime NOT NULL,
+				PRIMARY KEY  (id),
+				KEY status (status),
+				KEY requester_id (requester_id),
+				KEY requested_slug (requested_slug)
 			) $charset_collate;"
 		);
 
@@ -144,8 +162,9 @@ class Notes_Adda_Activator {
 	public static function setup_roles() {
 		// 1. Student Role
 		$student_caps = array(
-			'read'                    => true,
-			'notes_adda_upload_notes' => true,
+			'read'                        => true,
+			'notes_adda_upload_notes'     => true,
+			'notes_adda_request_subjects' => true,
 		);
 		$student_role = get_role( 'notes_adda_student' );
 		if ( ! $student_role ) {
@@ -161,13 +180,14 @@ class Notes_Adda_Activator {
 			'read'                        => true,
 			'notes_adda_upload_notes'     => true,
 			'notes_adda_review_notes'     => true,
-			'notes_adda_manage_subjects'  => true,
+			'notes_adda_request_subjects' => true,
 			'notes_adda_manage_all_notes' => true,
 		);
 		$expert_role = get_role( 'notes_adda_expert' );
 		if ( ! $expert_role ) {
 			add_role( 'notes_adda_expert', 'Expert', $expert_caps );
 		} else {
+			$expert_role->remove_cap( 'notes_adda_manage_subjects' );
 			foreach ( $expert_caps as $cap => $grant ) {
 				$expert_role->add_cap( $cap, $grant );
 			}
@@ -178,6 +198,7 @@ class Notes_Adda_Activator {
 			'read'                        => true,
 			'notes_adda_upload_notes'     => true,
 			'notes_adda_review_notes'     => true,
+			'notes_adda_request_subjects' => true,
 			'notes_adda_manage_subjects'  => true,
 			'notes_adda_manage_all_notes' => true,
 			'notes_adda_manage_users'     => true,

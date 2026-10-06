@@ -11,7 +11,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'NOTES_ADDA_VERSION', '0.2.1' );
+define( 'NOTES_ADDA_VERSION', '0.2.2' );
 define( 'NOTES_ADDA_PATH', plugin_dir_path( __FILE__ ) );
 define( 'NOTES_ADDA_URL', plugin_dir_url( __FILE__ ) );
 
@@ -19,6 +19,7 @@ require_once NOTES_ADDA_PATH . 'database/class-notes-adda-activator.php';
 require_once NOTES_ADDA_PATH . 'database/class-notes-adda-tags.php';
 require_once NOTES_ADDA_PATH . 'database/class-notes-adda-user-profile.php';
 require_once NOTES_ADDA_PATH . 'database/class-notes-adda-subjects.php';
+require_once NOTES_ADDA_PATH . 'database/class-notes-adda-subject-requests.php';
 require_once NOTES_ADDA_PATH . 'database/class-notes-adda-bookmarks.php';
 require_once NOTES_ADDA_PATH . 'database/class-notes-adda-notes.php';
 require_once NOTES_ADDA_PATH . 'database/class-notes-adda-note-tags.php';
@@ -57,6 +58,7 @@ add_filter( 'user_has_cap', function( $allcaps, $caps, $args, $user ) {
 	$owner_id = (int) get_option( 'notes_adda_owner_id' );
 	if ( $owner_id > 0 && $user && (int) $user->ID === $owner_id ) {
 		$allcaps['notes_adda_upload_notes']     = true;
+		$allcaps['notes_adda_request_subjects'] = true;
 		$allcaps['notes_adda_review_notes']     = true;
 		$allcaps['notes_adda_manage_subjects']  = true;
 		$allcaps['notes_adda_manage_all_notes'] = true;

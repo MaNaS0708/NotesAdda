@@ -28,6 +28,14 @@ class Notes_Adda_Ajax {
 		add_action( 'wp_ajax_notes_adda_create_subject', array( __CLASS__, 'create_subject' ) );
 		add_action( 'wp_ajax_notes_adda_delete_subject', array( __CLASS__, 'delete_subject' ) );
 
+		// Subject Requests
+		add_action( 'wp_ajax_notes_adda_request_subject', array( __CLASS__, 'request_subject' ) );
+		add_action( 'wp_ajax_notes_adda_get_my_subject_requests', array( __CLASS__, 'get_my_subject_requests' ) );
+		add_action( 'wp_ajax_notes_adda_get_subject_requests', array( __CLASS__, 'get_subject_requests' ) );
+		add_action( 'wp_ajax_notes_adda_approve_subject_request', array( __CLASS__, 'approve_subject_request' ) );
+		add_action( 'wp_ajax_notes_adda_reject_subject_request', array( __CLASS__, 'reject_subject_request' ) );
+		add_action( 'wp_ajax_notes_adda_delete_subject_request', array( __CLASS__, 'delete_subject_request' ) );
+
 		// Bookmarks
 		add_action( 'wp_ajax_notes_adda_get_bookmark_status', array( __CLASS__, 'get_bookmark_status' ) );
 		add_action( 'wp_ajax_notes_adda_toggle_bookmark', array( __CLASS__, 'toggle_bookmark' ) );
@@ -291,6 +299,124 @@ class Notes_Adda_Ajax {
 		}
 
 		$result = Notes_Adda_Subjects::delete( $id );
+		if ( is_wp_error( $result ) ) {
+			self::send_error( $result );
+		}
+
+		wp_send_json_success( array( 'deleted' => true ) );
+	}
+
+	/**
+	 * Submit a subject request (Student, Expert, Admin).
+	 */
+	public static function request_subject() {
+		$user_id = self::check_auth();
+
+		if ( ! current_user_can( 'notes_adda_request_subjects' ) && ! current_user_can( 'manage_options' ) ) {
+			self::send_error( new WP_Error( 'notes_adda_forbidden', 'You do not have permission to request subjects.' ) );
+		}
+
+		$name   = isset( $_POST['name'] ) ? sanitize_text_field( wp_unslash( $_POST['name'] ) ) : '';
+		$reason = isset( $_POST['reason'] ) ? sanitize_textarea_field( wp_unslash( $_POST['reason'] ) ) : '';
+
+		if ( empty( trim( $name ) ) ) {
+			self::send_error( new WP_Error( 'notes_adda_missing_name', 'Subject name is required.' ) );
+		}
+
+		$result = Notes_Adda_Subject_Requests::request( $name, $user_id, $reason );
+		if ( is_wp_error( $result ) ) {
+			self::send_error( $result );
+		}
+
+		wp_send_json_success( $result );
+	}
+
+	/**
+	 * Get current user's submitted subject requests.
+	 */
+	public static function get_my_subject_requests() {
+		$user_id = self::check_auth();
+
+		$requests = Notes_Adda_Subject_Requests::get_user_requests( $user_id );
+		wp_send_json_success( $requests );
+	}
+
+	/**
+	 * Get all subject requests (Admin only).
+	 */
+	public static function get_subject_requests() {
+		$user_id = self::check_auth();
+
+		if ( ! current_user_can( 'notes_adda_manage_subjects' ) && ! current_user_can( 'manage_options' ) ) {
+			self::send_error( new WP_Error( 'notes_adda_forbidden', 'Only Notes Adda Admins can view subject requests.' ) );
+		}
+
+		$requests = Notes_Adda_Subject_Requests::get_all_requests();
+		wp_send_json_success( $requests );
+	}
+
+	/**
+	 * Approve a subject request (Admin only).
+	 */
+	public static function approve_subject_request() {
+		$user_id = self::check_auth();
+
+		if ( ! current_user_can( 'notes_adda_manage_subjects' ) && ! current_user_can( 'manage_options' ) ) {
+			self::send_error( new WP_Error( 'notes_adda_forbidden', 'Only Notes Adda Admins can approve subject requests.' ) );
+		}
+
+		$id = isset( $_POST['id'] ) ? (int) $_POST['id'] : 0;
+		if ( $id <= 0 ) {
+			self::send_error( new WP_Error( 'notes_adda_invalid_id', 'Please provide a valid request ID.' ) );
+		}
+
+		$result = Notes_Adda_Subject_Requests::approve( $id, $user_id );
+		if ( is_wp_error( $result ) ) {
+			self::send_error( $result );
+		}
+
+		wp_send_json_success( $result );
+	}
+
+	/**
+	 * Reject a subject request (Admin only).
+	 */
+	public static function reject_subject_request() {
+		$user_id = self::check_auth();
+
+		if ( ! current_user_can( 'notes_adda_manage_subjects' ) && ! current_user_can( 'manage_options' ) ) {
+			self::send_error( new WP_Error( 'notes_adda_forbidden', 'Only Notes Adda Admins can reject subject requests.' ) );
+		}
+
+		$id = isset( $_POST['id'] ) ? (int) $_POST['id'] : 0;
+		if ( $id <= 0 ) {
+			self::send_error( new WP_Error( 'notes_adda_invalid_id', 'Please provide a valid request ID.' ) );
+		}
+
+		$result = Notes_Adda_Subject_Requests::reject( $id, $user_id );
+		if ( is_wp_error( $result ) ) {
+			self::send_error( $result );
+		}
+
+		wp_send_json_success( $result );
+	}
+
+	/**
+	 * Delete a subject request (Admin only).
+	 */
+	public static function delete_subject_request() {
+		$user_id = self::check_auth();
+
+		if ( ! current_user_can( 'notes_adda_manage_subjects' ) && ! current_user_can( 'manage_options' ) ) {
+			self::send_error( new WP_Error( 'notes_adda_forbidden', 'Only Notes Adda Admins can delete subject requests.' ) );
+		}
+
+		$id = isset( $_POST['id'] ) ? (int) $_POST['id'] : 0;
+		if ( $id <= 0 ) {
+			self::send_error( new WP_Error( 'notes_adda_invalid_id', 'Please provide a valid request ID.' ) );
+		}
+
+		$result = Notes_Adda_Subject_Requests::delete( $id );
 		if ( is_wp_error( $result ) ) {
 			self::send_error( $result );
 		}
