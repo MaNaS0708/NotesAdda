@@ -151,17 +151,84 @@ class Notes_Adda_Bookmarks {
 	 * @param int $per_page Items per page.
 	 * @return array|WP_Error Query result array on success, WP_Error on failure.
 	 */
-	public static function get_by_user( $user_id, $page = 1, $per_page = 10 ) {
+	/**
+	 * Get paginated bookmarked notes for a specific user with full metadata.
+	 *
+	 * @param int $user_id WordPress user ID.
+	 * @param int $page Page number.
+	 * @param int $per_page Items per page.
+	 * @return array|WP_Error Query result array on success, WP_Error on failure.
+	 */
+	public static function get_bookmarked_notes( $user_id, $page = 1, $per_page = 9 ) {
+		global $wpdb;
+
 		$user_id = (int) $user_id;
 		if ( $user_id <= 0 ) {
 			return new WP_Error( 'notes_adda_invalid_user_id', 'Please provide a valid user ID.' );
 		}
 
-		return Notes_Adda_Note_Query::get_notes( array(
-			'bookmarked_by' => $user_id,
-			'page'          => $page,
-			'per_page'      => $per_page,
-		) );
+		$page     = max( 1, (int) $page );
+		$per_page = max( 1, min( 100, (int) $per_page ) );
+		$offset   = ( $page - 1 ) * $per_page;
+
+		$notes_table     = $wpdb->prefix . 'notes_adda_notes';
+		$bookmarks_table = $wpdb->prefix . 'notes_adda_bookmarks';
+
+		$count_sql = $wpdb->prepare(
+			"SELECT COUNT(*) FROM $bookmarks_table b 
+			INNER JOIN $notes_table n ON b.note_id = n.id 
+			WHERE b.user_id = %d",
+			$user_id
+		);
+		$total = (int) $wpdb->get_var( $count_sql );
+
+		$items_sql = $wpdb->prepare(
+			"SELECT n.*, b.created_at AS bookmarked_at 
+			FROM $bookmarks_table b 
+			INNER JOIN $notes_table n ON b.note_id = n.id 
+			WHERE b.user_id = %d 
+			ORDER BY b.created_at DESC 
+			LIMIT %d OFFSET %d",
+			$user_id,
+			$per_page,
+			$offset
+		);
+		$items = $wpdb->get_results( $items_sql );
+
+		if ( null === $items ) {
+			return new WP_Error( 'notes_adda_query_failed', 'Database query failed.' );
+		}
+
+		if ( ! empty( $items ) ) {
+			foreach ( $items as &$item ) {
+				if ( empty( $item->review_status ) ) {
+					$item->review_status = 'unverified';
+				}
+
+				$owner = get_userdata( (int) $item->owner_id );
+				$item->uploader_name  = $owner ? $owner->display_name : 'Student';
+				$item->uploader_login = $owner ? $owner->user_login : '';
+
+				if ( ! empty( $item->reviewed_by ) ) {
+					$reviewer = get_userdata( (int) $item->reviewed_by );
+					$item->reviewer_name = $reviewer ? $reviewer->display_name : 'Expert Reviewer';
+				} else {
+					$item->reviewer_name = '';
+				}
+
+				$item->is_bookmarked = true;
+			}
+		}
+
+		$total_pages = $per_page > 0 ? (int) ceil( $total / $per_page ) : 0;
+
+		return array(
+			'items'       => $items ? $items : array(),
+			'total'       => $total,
+			'page'        => $page,
+			'per_page'    => $per_page,
+			'total_pages' => $total_pages,
+		);
 	}
 
 	/**

@@ -381,8 +381,28 @@
 }
 
 /* Bookmark Buttons */
-.na-icon-btn.na-btn-bookmark.bookmarked {
+.na-icon-btn.na-btn-bookmark {
+    color: var(--na-ink-soft);
+    border: 1px solid transparent;
+    transition: all var(--na-transition);
+}
+.na-icon-btn.na-btn-bookmark:hover {
     color: var(--na-brand);
+    background: var(--na-brand-soft);
+    border-color: #f0cbbb;
+}
+.na-icon-btn.na-btn-bookmark.bookmarked {
+    color: var(--na-brand-hover);
+    background: var(--na-brand-soft);
+    border-color: #f0cbbb;
+}
+.na-icon-btn.na-btn-bookmark.bookmarked:hover {
+    background: #ffe3d5;
+    border-color: #e5b39f;
+}
+.na-icon-btn.loading, .na-btn.loading {
+    opacity: 0.6;
+    cursor: wait !important;
 }
 .na-btn.bookmarked {
     background: var(--na-brand-soft);

@@ -345,10 +345,10 @@
                     <!-- Empty State -->
                     <div id="na-bookmarks-empty" class="na-state-box na-empty-box" style="display:none;">
                         <div class="na-state-icon-wrap"><span class="dashicons dashicons-bookmark na-state-icon"></span></div>
-                        <h3 class="na-state-title">No bookmarks yet</h3>
-                        <p class="na-state-desc">You haven't bookmarked any notes yet. Browse the library to save materials for quick access.</p>
+                        <h3 class="na-state-title">No saved notes yet</h3>
+                        <p class="na-state-desc">Save useful notes to find them quickly later.</p>
                         <button type="button" class="na-btn na-btn-primary" id="na-empty-browse-btn">
-                            <span class="dashicons dashicons-search"></span> Explore Study Notes
+                            <span class="dashicons dashicons-books"></span> Browse Study Library
                         </button>
                     </div>
 

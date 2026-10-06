@@ -41,7 +41,8 @@ class Notes_Adda_Ajax {
 		// Bookmarks
 		add_action( 'wp_ajax_notes_adda_get_bookmark_status', array( __CLASS__, 'get_bookmark_status' ) );
 		add_action( 'wp_ajax_notes_adda_toggle_bookmark', array( __CLASS__, 'toggle_bookmark' ) );
-		add_action( 'wp_ajax_notes_adda_query_bookmarks', array( __CLASS__, 'query_bookmarks' ) );
+		add_action( 'wp_ajax_notes_adda_get_bookmarked_notes', array( __CLASS__, 'get_bookmarked_notes' ) );
+		add_action( 'wp_ajax_notes_adda_query_bookmarks', array( __CLASS__, 'get_bookmarked_notes' ) );
 
 		// User Management (Admin only)
 		add_action( 'wp_ajax_notes_adda_get_users', array( __CLASS__, 'get_users' ) );
@@ -485,28 +486,27 @@ class Notes_Adda_Ajax {
 	}
 
 	/**
-	 * Query bookmarks handler.
+	 * Get bookmarked notes handler for current logged-in user.
 	 */
-	public static function query_bookmarks() {
+	public static function get_bookmarked_notes() {
 		$user_id = self::check_auth();
 
-		$args = array(
-			'bookmarked_by' => $user_id,
-		);
+		$page     = isset( $_REQUEST['page'] ) ? max( 1, (int) $_REQUEST['page'] ) : 1;
+		$per_page = isset( $_REQUEST['per_page'] ) ? max( 1, min( 100, (int) $_REQUEST['per_page'] ) ) : 9;
 
-		$allowed_filters = array( 'search', 'subject', 'page', 'per_page', 'orderby', 'order' );
-		foreach ( $allowed_filters as $filter ) {
-			if ( isset( $_REQUEST[ $filter ] ) ) {
-				$args[ $filter ] = sanitize_text_field( wp_unslash( $_REQUEST[ $filter ] ) );
-			}
-		}
-
-		$result = Notes_Adda_Note_Query::get_notes( $args );
+		$result = Notes_Adda_Bookmarks::get_bookmarked_notes( $user_id, $page, $per_page );
 		if ( is_wp_error( $result ) ) {
 			self::send_error( $result );
 		}
 
 		wp_send_json_success( $result );
+	}
+
+	/**
+	 * Backward compatibility alias for query_bookmarks.
+	 */
+	public static function query_bookmarks() {
+		self::get_bookmarked_notes();
 	}
 
 	/**

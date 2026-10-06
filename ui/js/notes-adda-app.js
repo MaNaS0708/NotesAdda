@@ -594,13 +594,14 @@
             let action = 'notes_adda_query_notes';
             const queryData = {
                 page: self.currentPage,
-                per_page: 9
+                per_page: 9,
+                _ajax_nonce: NotesAdda.nonce
             };
 
             if (view === 'my-notes') {
                 queryData.owner_id = NotesAdda.user_id;
             } else if (view === 'bookmarks') {
-                action = 'notes_adda_query_bookmarks';
+                action = 'notes_adda_get_bookmarked_notes';
             } else {
                 const searchVal = $('#na-search-input').val();
                 if (searchVal && searchVal.trim()) queryData.search = searchVal.trim();
@@ -628,12 +629,16 @@
                         if (res.data.total_pages > 1) {
                             self.renderPagination(res.data.page, res.data.total_pages, $pagination);
                         }
-                    } else {
+                    } else if (res.success && res.data) {
                         self.setResultSummary(view, 0);
                         $empty.show();
+                    } else {
+                        self.setResultSummary(view, 'error');
+                        $container.html('<div class="na-state-box"><p style="color:var(--na-danger);">' + (res.data && res.data.message ? self.escapeHtml(res.data.message) : 'Failed to load notes. Please try again.') + '</p></div>');
                     }
                 },
-                error: function() {
+                error: function(xhr, status, error) {
+                    console.error('Notes Adda loadNotes error:', status, error, xhr.responseText);
                     $loading.hide();
                     self.setResultSummary(view, 'error');
                     $container.html('<div class="na-state-box"><p style="color:var(--na-danger);">Failed to load notes. Please try again.</p></div>');
@@ -724,7 +729,7 @@
                                 <a href="${self.escapeHtml(note.file_url)}" target="_blank" rel="noopener noreferrer" class="na-icon-btn" title="Open PDF" aria-label="Open PDF for ${self.escapeHtml(note.title)}">
                                     <span class="dashicons dashicons-pdf"></span>
                                 </a>` : ''}
-                                <button type="button" class="na-icon-btn na-btn-bookmark ${isBookmarked ? 'bookmarked' : ''}" title="${isBookmarked ? 'Remove bookmark' : 'Bookmark note'}" aria-label="Bookmark ${self.escapeHtml(note.title)}">
+                                <button type="button" class="na-icon-btn na-btn-bookmark ${isBookmarked ? 'bookmarked' : ''}" data-id="${note.id}" title="${isBookmarked ? 'Remove saved note' : 'Save note'}" aria-label="${isBookmarked ? 'Remove saved note' : 'Save note'}">
                                     <span class="dashicons dashicons-bookmark"></span>
                                 </button>
                                 <button type="button" class="na-icon-btn na-btn-like" title="Like note" aria-label="Like ${self.escapeHtml(note.title)}">
@@ -1056,11 +1061,16 @@
             const wasBookmarked = $btn.hasClass('bookmarked');
             const newStatus = !wasBookmarked;
 
+            const $matchingBtns = $(`.na-btn-bookmark[data-id="${noteId}"], #na-modal-bookmark-btn[data-id="${noteId}"]`);
+
+            // Disable during request
+            $matchingBtns.prop('disabled', true).addClass('loading');
+
             // Optimistic update across all buttons matching this noteId
-            $(`.na-btn-bookmark[data-id="${noteId}"], #na-modal-bookmark-btn[data-id="${noteId}"]`)
+            $matchingBtns
                 .toggleClass('bookmarked', newStatus)
-                .attr('title', newStatus ? 'Saved to bookmarks' : 'Save to bookmarks')
-                .attr('aria-label', newStatus ? 'Remove bookmark' : 'Save bookmark')
+                .attr('title', newStatus ? 'Remove saved note' : 'Save note')
+                .attr('aria-label', newStatus ? 'Remove saved note' : 'Save note')
                 .find('.na-btn-text, .na-bookmark-text').text(newStatus ? 'Saved' : 'Save');
 
             $.post(NotesAdda.ajax_url, {
@@ -1068,12 +1078,13 @@
                 note_id: noteId,
                 _ajax_nonce: NotesAdda.nonce
             }, function(res) {
+                $matchingBtns.prop('disabled', false).removeClass('loading');
                 if (res.success) {
                     const isBookmarked = res.data.is_bookmarked;
-                    $(`.na-btn-bookmark[data-id="${noteId}"], #na-modal-bookmark-btn[data-id="${noteId}"]`)
+                    $matchingBtns
                         .toggleClass('bookmarked', isBookmarked)
-                        .attr('title', isBookmarked ? 'Saved to bookmarks' : 'Save to bookmarks')
-                        .attr('aria-label', isBookmarked ? 'Remove bookmark' : 'Save bookmark')
+                        .attr('title', isBookmarked ? 'Remove saved note' : 'Save note')
+                        .attr('aria-label', isBookmarked ? 'Remove saved note' : 'Save note')
                         .find('.na-btn-text, .na-bookmark-text').text(isBookmarked ? 'Saved' : 'Save');
 
                     // If on bookmarks view and removed, reload
@@ -1082,19 +1093,20 @@
                     }
                 } else {
                     // Revert
-                    $(`.na-btn-bookmark[data-id="${noteId}"], #na-modal-bookmark-btn[data-id="${noteId}"]`)
+                    $matchingBtns
                         .toggleClass('bookmarked', wasBookmarked)
-                        .attr('title', wasBookmarked ? 'Saved to bookmarks' : 'Save to bookmarks')
-                        .attr('aria-label', wasBookmarked ? 'Remove bookmark' : 'Save bookmark')
+                        .attr('title', wasBookmarked ? 'Remove saved note' : 'Save note')
+                        .attr('aria-label', wasBookmarked ? 'Remove saved note' : 'Save note')
                         .find('.na-btn-text, .na-bookmark-text').text(wasBookmarked ? 'Saved' : 'Save');
                     alert(res.data && res.data.message ? res.data.message : 'Could not update bookmark.');
                 }
             }).fail(function() {
+                $matchingBtns.prop('disabled', false).removeClass('loading');
                 // Revert
-                $(`.na-btn-bookmark[data-id="${noteId}"], #na-modal-bookmark-btn[data-id="${noteId}"]`)
+                $matchingBtns
                     .toggleClass('bookmarked', wasBookmarked)
-                    .attr('title', wasBookmarked ? 'Saved to bookmarks' : 'Save to bookmarks')
-                    .attr('aria-label', wasBookmarked ? 'Remove bookmark' : 'Save bookmark')
+                    .attr('title', wasBookmarked ? 'Remove saved note' : 'Save note')
+                    .attr('aria-label', wasBookmarked ? 'Remove saved note' : 'Save note')
                     .find('.na-btn-text, .na-bookmark-text').text(wasBookmarked ? 'Saved' : 'Save');
                 alert('An error occurred updating bookmark.');
             });
@@ -1315,7 +1327,7 @@
                             <div class="na-surface-card na-note-actions-card">
                                 <h4 class="na-side-card-title">Actions</h4>
                                 <div class="na-note-actions-stack">
-                                    <button type="button" class="na-btn na-btn-block na-btn-bookmark ${isBookmarked ? 'bookmarked' : ''}" data-id="${note.id}" title="${isBookmarked ? 'Saved to bookmarks' : 'Save to bookmarks'}" aria-label="${isBookmarked ? 'Remove bookmark' : 'Save bookmark'}">
+                                    <button type="button" class="na-btn na-btn-block na-btn-bookmark ${isBookmarked ? 'bookmarked' : ''}" data-id="${note.id}" title="${isBookmarked ? 'Remove saved note' : 'Save note'}" aria-label="${isBookmarked ? 'Remove saved note' : 'Save note'}">
                                         <span class="dashicons dashicons-bookmark"></span>
                                         <span class="na-btn-text">${isBookmarked ? 'Saved' : 'Save'}</span>
                                     </button>
@@ -1439,9 +1451,9 @@
                             <span>Open & Download PDF</span>
                         </a>` : '<p style="color:var(--na-muted);">No document attached.</p>'}
                         
-                        <button type="button" class="na-btn na-btn-secondary ${isBookmarked ? 'bookmarked' : ''}" id="na-modal-bookmark-btn" data-id="${note.id}">
+                        <button type="button" class="na-btn na-btn-secondary ${isBookmarked ? 'bookmarked' : ''}" id="na-modal-bookmark-btn" data-id="${note.id}" title="${isBookmarked ? 'Remove saved note' : 'Save note'}" aria-label="${isBookmarked ? 'Remove saved note' : 'Save note'}">
                             <span class="dashicons dashicons-bookmark"></span>
-                            <span class="na-btn-text">${isBookmarked ? 'Bookmarked' : 'Bookmark'}</span>
+                            <span class="na-btn-text">${isBookmarked ? 'Saved' : 'Save'}</span>
                         </button>
                     </div>
                 `;
