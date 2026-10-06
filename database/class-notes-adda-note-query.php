@@ -22,22 +22,18 @@ class Notes_Adda_Note_Query {
 			);
 		}
 
+		$is_review_queue = ! empty( $args['is_review_queue'] );
+
 		$orderby_raw     = isset( $args['orderby'] ) ? strtolower( trim( $args['orderby'] ) ) : 'created_at';
 		$allowed_orderby = array( 'created_at', 'title', 'like_count' );
 		if ( ! in_array( $orderby_raw, $allowed_orderby, true ) ) {
-			return new WP_Error(
-				'notes_adda_invalid_orderby',
-				'Invalid orderby parameter. Allowed fields: created_at, title, like_count.'
-			);
+			$orderby_raw = 'created_at';
 		}
 
 		$order_raw     = isset( $args['order'] ) ? strtoupper( trim( $args['order'] ) ) : 'DESC';
 		$allowed_order = array( 'ASC', 'DESC' );
 		if ( ! in_array( $order_raw, $allowed_order, true ) ) {
-			return new WP_Error(
-				'notes_adda_invalid_order',
-				'Invalid order parameter. Allowed values: ASC, DESC.'
-			);
+			$order_raw = 'DESC';
 		}
 
 		$page     = isset( $args['page'] ) ? (int) $args['page'] : 1;
@@ -50,10 +46,10 @@ class Notes_Adda_Note_Query {
 			);
 		}
 
-		if ( $per_page < 1 || $per_page > 50 ) {
+		if ( $per_page < 1 || $per_page > 100 ) {
 			return new WP_Error(
 				'notes_adda_invalid_per_page',
-				'Per page parameter must be an integer between 1 and 50.'
+				'Per page parameter must be an integer between 1 and 100.'
 			);
 		}
 
@@ -62,20 +58,31 @@ class Notes_Adda_Note_Query {
 		$notes_table     = $wpdb->prefix . 'notes_adda_notes';
 		$note_tags_table = $wpdb->prefix . 'notes_adda_note_tags';
 		$tags_table      = $wpdb->prefix . 'notes_adda_tags';
+		$bookmarks_table = $wpdb->prefix . 'notes_adda_bookmarks';
 
 		$where_clauses = array( '1=1' );
 		$query_params  = array();
 
 		if ( isset( $args['owner_id'] ) ) {
 			$owner_id = (int) $args['owner_id'];
-			if ( $owner_id <= 0 ) {
-				return new WP_Error(
-					'notes_adda_invalid_owner_id',
-					'Invalid owner_id parameter.'
-				);
+			if ( $owner_id > 0 ) {
+				$where_clauses[] = 'n.owner_id = %d';
+				$query_params[]  = $owner_id;
 			}
-			$where_clauses[] = 'n.owner_id = %d';
-			$query_params[]  = $owner_id;
+		}
+
+		if ( isset( $args['bookmarked_by'] ) ) {
+			$bookmarked_by = (int) $args['bookmarked_by'];
+			if ( $bookmarked_by > 0 ) {
+				$where_clauses[] = "EXISTS (SELECT 1 FROM $bookmarks_table b WHERE b.note_id = n.id AND b.user_id = %d)";
+				$query_params[]  = $bookmarked_by;
+			}
+		}
+
+		if ( isset( $args['review_status'] ) && '' !== trim( $args['review_status'] ) && 'all' !== $args['review_status'] ) {
+			$review_status   = sanitize_key( trim( $args['review_status'] ) );
+			$where_clauses[] = 'n.review_status = %s';
+			$query_params[]  = $review_status;
 		}
 
 		if ( isset( $args['subject'] ) && '' !== trim( $args['subject'] ) ) {
@@ -84,7 +91,7 @@ class Notes_Adda_Note_Query {
 			$query_params[]  = $subject;
 		}
 
-		if ( isset( $args['is_whole_notes'] ) ) {
+		if ( isset( $args['is_whole_notes'] ) && '' !== $args['is_whole_notes'] ) {
 			$is_whole        = ! empty( $args['is_whole_notes'] ) ? 1 : 0;
 			$where_clauses[] = 'n.is_whole_notes = %d';
 			$query_params[]  = $is_whole;
@@ -92,14 +99,10 @@ class Notes_Adda_Note_Query {
 
 		if ( isset( $args['tag_id'] ) ) {
 			$tag_id = (int) $args['tag_id'];
-			if ( $tag_id <= 0 ) {
-				return new WP_Error(
-					'notes_adda_invalid_tag_id',
-					'Invalid tag_id parameter.'
-				);
+			if ( $tag_id > 0 ) {
+				$where_clauses[] = "EXISTS (SELECT 1 FROM $note_tags_table nt WHERE nt.note_id = n.id AND nt.tag_id = %d)";
+				$query_params[]  = $tag_id;
 			}
-			$where_clauses[] = "EXISTS (SELECT 1 FROM $note_tags_table nt WHERE nt.note_id = n.id AND nt.tag_id = %d)";
-			$query_params[]  = $tag_id;
 		}
 
 		if ( isset( $args['tag_slug'] ) && '' !== trim( $args['tag_slug'] ) ) {
@@ -130,7 +133,13 @@ class Notes_Adda_Note_Query {
 
 		$total = (int) $wpdb->get_var( $prepared_count_sql );
 
-		$items_sql          = "SELECT n.* FROM $notes_table n WHERE $where_sql ORDER BY n.$orderby_raw $order_raw LIMIT %d OFFSET %d";
+		if ( $is_review_queue ) {
+			$order_clause = "ORDER BY (CASE WHEN n.review_status = 'unverified' THEN 0 ELSE 1 END) ASC, n.created_at DESC";
+		} else {
+			$order_clause = "ORDER BY n.$orderby_raw $order_raw";
+		}
+
+		$items_sql          = "SELECT n.* FROM $notes_table n WHERE $where_sql $order_clause LIMIT %d OFFSET %d";
 		$items_params       = array_merge( $query_params, array( $per_page, $offset ) );
 		$prepared_items_sql = $wpdb->prepare( $items_sql, $items_params );
 
@@ -141,6 +150,38 @@ class Notes_Adda_Note_Query {
 				'notes_adda_query_failed',
 				'Database query failed.'
 			);
+		}
+
+		$current_user_id = is_user_logged_in() ? get_current_user_id() : 0;
+
+		// Decorate items with uploader name, reviewer name, bookmark status
+		if ( ! empty( $items ) ) {
+			foreach ( $items as &$item ) {
+				// Default review_status if not set
+				if ( empty( $item->review_status ) ) {
+					$item->review_status = 'unverified';
+				}
+
+				// Owner details
+				$owner = get_userdata( (int) $item->owner_id );
+				$item->uploader_name  = $owner ? $owner->display_name : 'Student';
+				$item->uploader_login = $owner ? $owner->user_login : '';
+
+				// Reviewer details
+				if ( ! empty( $item->reviewed_by ) ) {
+					$reviewer = get_userdata( (int) $item->reviewed_by );
+					$item->reviewer_name = $reviewer ? $reviewer->display_name : 'Expert Reviewer';
+				} else {
+					$item->reviewer_name = '';
+				}
+
+				// Bookmark status
+				if ( $current_user_id > 0 ) {
+					$item->is_bookmarked = Notes_Adda_Bookmarks::has_bookmarked( (int) $item->id, $current_user_id );
+				} else {
+					$item->is_bookmarked = false;
+				}
+			}
 		}
 
 		$total_pages = $per_page > 0 ? (int) ceil( $total / $per_page ) : 0;
