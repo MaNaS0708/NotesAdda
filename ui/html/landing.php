@@ -17,7 +17,7 @@ $developed_by = get_option( 'notes_adda_developed_by', 'Notes Adda Team' );
 		<div class="na-landing-container">
 			<nav class="na-landing-nav">
 				<a href="<?php echo esc_url( home_url( '/' ) ); ?>" class="na-landing-brand-link" title="Notes Adda">
-					<img src="<?php echo esc_url( NOTES_ADDA_URL . 'ui/assets/images/logoname.png' ); ?>" alt="Notes Adda" class="na-landing-brand-img">
+					<img src="<?php echo esc_url( NOTES_ADDA_URL . 'ui/assets/images/logoname.png' ); ?>" alt="Notes Adda" class="na-landing-brand-img" width="200" height="40" style="max-height: 40px; width: auto; max-width: 220px; object-fit: contain;">
 				</a>
 
 				<ul class="na-landing-menu">
@@ -421,7 +421,7 @@ $developed_by = get_option( 'notes_adda_developed_by', 'Notes Adda Team' );
 		<div class="na-landing-container">
 			<div class="na-landing-footer-top">
 				<a href="<?php echo esc_url( home_url( '/' ) ); ?>" class="na-landing-brand-link" title="Notes Adda">
-					<img src="<?php echo esc_url( NOTES_ADDA_URL . 'ui/assets/images/logoname.png' ); ?>" alt="Notes Adda" class="na-landing-brand-img">
+					<img src="<?php echo esc_url( NOTES_ADDA_URL . 'ui/assets/images/logoname.png' ); ?>" alt="Notes Adda" class="na-landing-brand-img" width="200" height="40" style="max-height: 40px; width: auto; max-width: 220px; object-fit: contain;">
 				</a>
 
 				<ul class="na-landing-footer-links">

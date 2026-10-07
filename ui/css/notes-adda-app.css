@@ -696,6 +696,7 @@
     right: 20%;
     height: 2px;
     background: linear-gradient(90deg, transparent, var(--na-brand), transparent);
+    pointer-events: none;
 }
 
 .na-brand-header {
@@ -704,11 +705,14 @@
 }
 
 .na-auth-brand-logo {
-    max-width: 240px;
-    height: auto;
-    object-fit: contain;
-    margin: 0 auto 12px;
     display: block;
+    width: auto;
+    height: auto;
+    max-width: 240px;
+    max-height: 80px;
+    margin-inline: auto;
+    margin-bottom: 12px;
+    object-fit: contain;
 }
 
 .na-brand-tagline {
@@ -789,15 +793,25 @@
 .na-sidebar-brand-link {
     display: flex;
     align-items: center;
+    min-width: 0;
+    overflow: hidden;
     text-decoration: none;
 }
 
 .na-sidebar-brand-logo {
-    max-height: 38px;
+    display: block;
     width: auto;
+    height: 38px;
     max-width: 200px;
     object-fit: contain;
+}
+
+.na-mobile-brand-logo {
     display: block;
+    width: auto;
+    height: 30px;
+    max-width: 160px;
+    object-fit: contain;
 }
 
 /* User Card in Sidebar */
@@ -971,9 +985,10 @@
 .na-main-container {
     flex: 1 1 auto;
     min-width: 0;
-    margin: 0 auto;
-    padding: 48px clamp(24px, 4.5vw, 64px) 80px;
-    max-width: 1400px;
+    margin: 0;
+    padding: 40px clamp(20px, 3.5vw, 56px) 80px;
+    position: relative;
+    z-index: 1;
 }
 
 .na-mobile-header {
@@ -1049,6 +1064,7 @@
     height: 1px;
     background: var(--na-brand);
     box-shadow: 0 0 8px var(--na-brand);
+    pointer-events: none;
 }
 
 .na-search-box {

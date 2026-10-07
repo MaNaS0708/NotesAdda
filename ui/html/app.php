@@ -3,7 +3,7 @@
         <div class="na-auth-container">
             <div class="na-auth-card">
                 <div class="na-brand-header">
-                    <img src="<?php echo esc_url( NOTES_ADDA_URL . 'ui/assets/images/logoname.png' ); ?>" alt="Notes Adda" class="na-auth-brand-logo">
+                    <img src="<?php echo esc_url( NOTES_ADDA_URL . 'ui/assets/images/logoname.png' ); ?>" alt="Notes Adda" class="na-auth-brand-logo" width="240" height="80" style="max-width: 240px; height: auto; max-height: 80px; object-fit: contain;">
                     <p class="na-brand-tagline">Cyber Knowledge &amp; Collaborative Notes Network</p>
                 </div>
 
@@ -99,7 +99,7 @@
             <aside class="na-sidebar">
                 <div class="na-sidebar-header">
                     <a href="<?php echo esc_url( home_url( '/' ) ); ?>" class="na-sidebar-brand-link" title="Notes Adda">
-                        <img src="<?php echo esc_url( NOTES_ADDA_URL . 'ui/assets/images/logoname.png' ); ?>" alt="Notes Adda" class="na-sidebar-brand-logo">
+                        <img src="<?php echo esc_url( NOTES_ADDA_URL . 'ui/assets/images/logoname.png' ); ?>" alt="Notes Adda" class="na-sidebar-brand-logo" width="180" height="38" style="max-width: 200px; height: 38px; width: auto; object-fit: contain;">
                     </a>
                 </div>
                 
@@ -197,7 +197,7 @@
                 <!-- Mobile Top Bar -->
                 <header class="na-mobile-header">
                     <div class="na-mobile-brand">
-                        <img src="<?php echo esc_url( NOTES_ADDA_URL . 'ui/assets/images/logoname.png' ); ?>" alt="Notes Adda" class="na-mobile-brand-logo">
+                        <img src="<?php echo esc_url( NOTES_ADDA_URL . 'ui/assets/images/logoname.png' ); ?>" alt="Notes Adda" class="na-mobile-brand-logo" width="140" height="30" style="max-width: 160px; height: 30px; width: auto; object-fit: contain;">
                     </div>
                     <button type="button" class="na-btn na-btn-primary na-btn-sm" id="na-mobile-new-note-btn">
                         <span class="dashicons dashicons-plus"></span> <span>Upload</span>
