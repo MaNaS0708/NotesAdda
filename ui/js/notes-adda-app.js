@@ -160,10 +160,11 @@
                 e.preventDefault();
                 const $btn = $(this);
                 $btn.css('opacity', '0.5');
-                $.post(NotesAdda.ajax_url, { action: 'notes_adda_logout', _ajax_nonce: NotesAdda.nonce }, function() {
-                    window.location.reload();
+                $.post(NotesAdda.ajax_url, { action: 'notes_adda_logout', _ajax_nonce: NotesAdda.nonce }, function(res) {
+                    const target = (res && res.data && res.data.redirect_url) || NotesAdda.landing_url || '/';
+                    window.location.href = target;
                 }).fail(function() {
-                    window.location.reload();
+                    window.location.href = NotesAdda.landing_url || '/';
                 });
             });
 

@@ -7,8 +7,11 @@ class Notes_Adda_Auth {
 
 	public static function init() {
 		add_action( 'wp_ajax_nopriv_notes_adda_register', array( __CLASS__, 'register_user' ) );
+		add_action( 'wp_ajax_notes_adda_register', array( __CLASS__, 'register_user' ) );
 		add_action( 'wp_ajax_nopriv_notes_adda_login', array( __CLASS__, 'login_user' ) );
+		add_action( 'wp_ajax_notes_adda_login', array( __CLASS__, 'login_user' ) );
 		add_action( 'wp_ajax_notes_adda_logout', array( __CLASS__, 'logout_user' ) );
+		add_action( 'wp_ajax_nopriv_notes_adda_logout', array( __CLASS__, 'logout_user' ) );
 	}
 
 	public static function register_user() {
@@ -89,9 +92,15 @@ class Notes_Adda_Auth {
 	}
 
 	public static function logout_user() {
-		check_ajax_referer( 'notes_adda_ajax_nonce', '_ajax_nonce' );
+		if ( ! empty( $_POST['_ajax_nonce'] ) ) {
+			check_ajax_referer( 'notes_adda_ajax_nonce', '_ajax_nonce', false );
+		}
 		wp_logout();
-		wp_send_json_success( array( 'message' => 'Logged out successfully.' ) );
+		$landing_url = class_exists( 'Notes_Adda_Frontend' ) ? Notes_Adda_Frontend::get_landing_url() : home_url( '/' );
+		wp_send_json_success( array(
+			'message'      => 'Logged out successfully.',
+			'redirect_url' => $landing_url,
+		) );
 	}
 }
 Notes_Adda_Auth::init();

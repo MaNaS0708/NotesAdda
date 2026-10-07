@@ -1,3 +1,15 @@
+<?php
+if ( ! is_user_logged_in() ) {
+    $auth_mode = isset( $_GET['auth'] ) ? sanitize_text_field( wp_unslash( $_GET['auth'] ) ) : '';
+    $args      = array();
+    if ( in_array( $auth_mode, array( 'login', 'register' ), true ) ) {
+        $args['auth'] = $auth_mode;
+    }
+    $target_url = class_exists( 'Notes_Adda_Frontend' ) ? Notes_Adda_Frontend::get_landing_url( $args ) : home_url( '/' );
+    wp_safe_redirect( $target_url );
+    exit;
+}
+?>
 <div id="notes-adda-app" class="notes-adda-app-container">
     <?php if ( ! is_user_logged_in() ) : ?>
         <div class="na-auth-container">
@@ -99,7 +111,7 @@
             <aside class="na-sidebar">
                 <div class="na-sidebar-header">
                     <a href="<?php echo esc_url( home_url( '/' ) ); ?>" class="na-sidebar-brand-link" title="Notes Adda">
-                        <img src="<?php echo esc_url( NOTES_ADDA_URL . 'ui/assets/images/logoname.png' ); ?>" alt="Notes Adda" class="na-sidebar-brand-logo" width="180" height="38" style="max-width: 200px; height: 38px; width: auto; object-fit: contain;">
+                        <img src="<?php echo esc_url( NOTES_ADDA_URL . 'ui/assets/images/logoname.png' ); ?>" alt="Notes Adda" class="na-sidebar-brand-logo" width="220" height="46" style="max-width: 235px; height: 46px; width: auto; object-fit: contain;">
                     </a>
                 </div>
                 

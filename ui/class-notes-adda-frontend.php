@@ -8,6 +8,7 @@ class Notes_Adda_Frontend {
 	public static function init() {
 		add_shortcode( 'notes_adda_app', array( __CLASS__, 'render_app' ) );
 		add_shortcode( 'notes_adda_landing', array( __CLASS__, 'render_landing' ) );
+		add_action( 'template_redirect', array( __CLASS__, 'check_auth_redirect' ) );
 		add_action( 'wp_enqueue_scripts', array( __CLASS__, 'enqueue_scripts' ) );
 		add_filter( 'template_include', array( __CLASS__, 'load_custom_template' ) );
 	}
@@ -88,9 +89,51 @@ class Notes_Adda_Frontend {
 		return 0;
 	}
 
-	public static function get_landing_url() {
+	public static function get_landing_url( $args = array() ) {
 		$page_id = self::get_landing_page_id();
-		return $page_id > 0 ? get_permalink( $page_id ) : home_url( '/' );
+		$url     = $page_id > 0 ? get_permalink( $page_id ) : home_url( '/' );
+
+		if ( ! empty( $args ) && is_array( $args ) ) {
+			$url = add_query_arg( $args, $url );
+		}
+
+		return $url;
+	}
+
+	public static function check_auth_redirect() {
+		if ( is_user_logged_in() ) {
+			return;
+		}
+
+		if ( wp_doing_ajax() || wp_is_json_request() || ( defined( 'DOING_CRON' ) && DOING_CRON ) ) {
+			return;
+		}
+
+		global $post;
+		$app_page_id = self::get_app_page_id();
+		$is_app_page = false;
+
+		if ( $app_page_id > 0 && is_page( $app_page_id ) ) {
+			$is_app_page = true;
+		} elseif ( is_a( $post, 'WP_Post' ) && has_shortcode( $post->post_content, 'notes_adda_app' ) ) {
+			$is_app_page = true;
+		}
+
+		if ( $is_app_page ) {
+			$auth_mode = isset( $_GET['auth'] ) ? sanitize_text_field( wp_unslash( $_GET['auth'] ) ) : '';
+			$args      = array();
+			if ( in_array( $auth_mode, array( 'login', 'register' ), true ) ) {
+				$args['auth'] = $auth_mode;
+			}
+			$landing_url = self::get_landing_url( $args );
+
+			$current_req = isset( $GLOBALS['wp']->request ) ? $GLOBALS['wp']->request : '';
+			$current_url = home_url( add_query_arg( array(), $current_req ) );
+			if ( untrailingslashit( strtok( $landing_url, '?' ) ) !== untrailingslashit( strtok( $current_url, '?' ) ) ) {
+				wp_safe_redirect( $landing_url );
+				exit;
+			}
+		}
 	}
 
 	public static function load_custom_template( $template ) {
@@ -129,6 +172,26 @@ class Notes_Adda_Frontend {
 				NOTES_ADDA_VERSION
 			);
 			wp_enqueue_style( 'dashicons' );
+
+			wp_enqueue_script(
+				'notes-adda-landing-script',
+				NOTES_ADDA_URL . 'ui/js/notes-adda-landing.js',
+				array( 'jquery' ),
+				NOTES_ADDA_VERSION,
+				true
+			);
+
+			wp_localize_script(
+				'notes-adda-landing-script',
+				'NotesAddaLanding',
+				array(
+					'ajax_url'     => admin_url( 'admin-ajax.php' ),
+					'nonce'        => wp_create_nonce( 'notes_adda_ajax_nonce' ),
+					'is_logged_in' => is_user_logged_in(),
+					'app_url'      => self::get_app_url(),
+					'landing_url'  => self::get_landing_url(),
+				)
+			);
 		}
 
 		// Check for App shortcode
@@ -202,6 +265,8 @@ class Notes_Adda_Frontend {
 					'can_manage_users'     => $can_manage_users,
 					'can_manage_all_notes' => $can_manage_all,
 					'login_url'            => wp_login_url( get_permalink() ),
+					'app_url'              => self::get_app_url(),
+					'landing_url'          => self::get_landing_url(),
 					'logo_icon'            => NOTES_ADDA_URL . 'ui/assets/images/logo_wui.png',
 					'logo_name'            => NOTES_ADDA_URL . 'ui/assets/images/logoname.png',
 				)

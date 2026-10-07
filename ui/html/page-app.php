@@ -2,6 +2,17 @@
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
+
+if ( ! is_user_logged_in() ) {
+	$auth_mode = isset( $_GET['auth'] ) ? sanitize_text_field( wp_unslash( $_GET['auth'] ) ) : '';
+	$args      = array();
+	if ( in_array( $auth_mode, array( 'login', 'register' ), true ) ) {
+		$args['auth'] = $auth_mode;
+	}
+	$target_url = class_exists( 'Notes_Adda_Frontend' ) ? Notes_Adda_Frontend::get_landing_url( $args ) : home_url( '/' );
+	wp_safe_redirect( $target_url );
+	exit;
+}
 ?>
 <!DOCTYPE html>
 <html <?php language_attributes(); ?>>
