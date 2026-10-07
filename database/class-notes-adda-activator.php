@@ -12,6 +12,8 @@ class Notes_Adda_Activator {
 		self::bootstrap_admin();
 		self::migrate_existing_users();
 		self::migrate_subjects();
+		self::migrate_review_statuses();
+		self::migrate_ratings();
 		self::provision_pages();
 
 		update_option( 'notes_adda_version', NOTES_ADDA_VERSION );
@@ -23,16 +25,18 @@ class Notes_Adda_Activator {
 
 		$charset_collate = $wpdb->get_charset_collate();
 
-		$notes_table     = $wpdb->prefix . 'notes_adda_notes';
-		$tags_table      = $wpdb->prefix . 'notes_adda_tags';
-		$note_tags_table = $wpdb->prefix . 'notes_adda_note_tags';
-		$user_tags_table = $wpdb->prefix . 'notes_adda_user_tags';
-		$likes_table     = $wpdb->prefix . 'notes_adda_likes';
-		$reports_table   = $wpdb->prefix . 'notes_adda_reports';
-		$profiles_table  = $wpdb->prefix . 'notes_adda_profiles';
-		$subjects_table  = $wpdb->prefix . 'notes_adda_subjects';
-		$bookmarks_table = $wpdb->prefix . 'notes_adda_bookmarks';
+		$notes_table            = $wpdb->prefix . 'notes_adda_notes';
+		$tags_table             = $wpdb->prefix . 'notes_adda_tags';
+		$note_tags_table        = $wpdb->prefix . 'notes_adda_note_tags';
+		$user_tags_table        = $wpdb->prefix . 'notes_adda_user_tags';
+		$likes_table            = $wpdb->prefix . 'notes_adda_likes';
+		$reports_table          = $wpdb->prefix . 'notes_adda_reports';
+		$profiles_table         = $wpdb->prefix . 'notes_adda_profiles';
+		$subjects_table         = $wpdb->prefix . 'notes_adda_subjects';
+		$bookmarks_table        = $wpdb->prefix . 'notes_adda_bookmarks';
 		$subject_requests_table = $wpdb->prefix . 'notes_adda_subject_requests';
+		$notifications_table    = $wpdb->prefix . 'notes_adda_notifications';
+		$expert_ratings_table   = $wpdb->prefix . 'notes_adda_expert_ratings';
 
 		if ( file_exists( ABSPATH . 'wp-admin/includes/upgrade.php' ) ) {
 			require_once ABSPATH . 'wp-admin/includes/upgrade.php';
@@ -51,7 +55,7 @@ class Notes_Adda_Activator {
 				file_url text NOT NULL,
 				file_id bigint(20) unsigned NOT NULL DEFAULT 0,
 				like_count bigint(20) unsigned NOT NULL DEFAULT 0,
-				review_status varchar(30) NOT NULL DEFAULT 'unverified',
+				review_status varchar(30) NOT NULL DEFAULT 'pending',
 				reviewed_by bigint(20) unsigned DEFAULT NULL,
 				reviewed_at datetime DEFAULT NULL,
 				review_note text DEFAULT NULL,
@@ -151,6 +155,38 @@ class Notes_Adda_Activator {
 				KEY status (status),
 				KEY requester_id (requester_id),
 				KEY requested_slug (requested_slug)
+			) $charset_collate;",
+
+			"CREATE TABLE $notifications_table (
+				id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+				user_id bigint(20) unsigned NOT NULL,
+				type varchar(50) NOT NULL,
+				title varchar(255) NOT NULL,
+				message text NOT NULL,
+				note_id bigint(20) unsigned NOT NULL DEFAULT 0,
+				is_read tinyint(1) NOT NULL DEFAULT 0,
+				created_at datetime NOT NULL,
+				read_at datetime DEFAULT NULL,
+				PRIMARY KEY  (id),
+				KEY user_read (user_id, is_read),
+				KEY user_id (user_id),
+				KEY note_id (note_id),
+				KEY created_at (created_at)
+			) $charset_collate;",
+
+			"CREATE TABLE $expert_ratings_table (
+				id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+				expert_id bigint(20) unsigned NOT NULL,
+				rater_id bigint(20) unsigned NOT NULL,
+				subject varchar(100) NOT NULL DEFAULT '',
+				rating decimal(3,2) NOT NULL,
+				created_at datetime NOT NULL,
+				updated_at datetime NOT NULL,
+				PRIMARY KEY  (id),
+				UNIQUE KEY expert_rater_subject (expert_id, rater_id, subject),
+				KEY expert_id (expert_id),
+				KEY rater_id (rater_id),
+				KEY subject (subject)
 			) $charset_collate;"
 		);
 
@@ -333,6 +369,79 @@ class Notes_Adda_Activator {
 					);
 				}
 			}
+		}
+	}
+
+	/**
+	 * Upgrade-safe migration: Migrate existing 'unverified' rows to 'pending'.
+	 */
+	public static function migrate_review_statuses() {
+		global $wpdb;
+		$notes_table = $wpdb->prefix . 'notes_adda_notes';
+
+		$table_exists = $wpdb->get_var( $wpdb->prepare( "SHOW TABLES LIKE %s", $notes_table ) );
+		if ( ! $table_exists ) {
+			return;
+		}
+
+		$wpdb->query(
+			"UPDATE $notes_table SET review_status = 'pending' WHERE review_status = 'unverified'"
+		);
+	}
+
+	/**
+	 * Upgrade-safe migration: Migrate expert ratings to include subject context & decimal(3,2) precision.
+	 */
+	public static function migrate_ratings() {
+		global $wpdb;
+		$expert_ratings_table = $wpdb->prefix . 'notes_adda_expert_ratings';
+
+		$table_exists = $wpdb->get_var( $wpdb->prepare( "SHOW TABLES LIKE %s", $expert_ratings_table ) );
+		if ( ! $table_exists ) {
+			return;
+		}
+
+		// 1. Add subject column if missing
+		$column_subject = $wpdb->get_results( "SHOW COLUMNS FROM $expert_ratings_table LIKE 'subject'" );
+		if ( empty( $column_subject ) ) {
+			$wpdb->query( "ALTER TABLE $expert_ratings_table ADD COLUMN subject varchar(100) NOT NULL DEFAULT '' AFTER rater_id" );
+		}
+
+		// 2. Ensure rating column is decimal(3,2)
+		$column_rating = $wpdb->get_results( "SHOW COLUMNS FROM $expert_ratings_table LIKE 'rating'" );
+		if ( ! empty( $column_rating ) && strpos( strtolower( $column_rating[0]->Type ), 'decimal' ) === false ) {
+			$wpdb->query( "ALTER TABLE $expert_ratings_table MODIFY COLUMN rating decimal(3,2) NOT NULL" );
+		}
+
+		// 3. Drop legacy unique key expert_rater if present and create expert_rater_subject
+		$indexes = $wpdb->get_results( "SHOW INDEX FROM $expert_ratings_table" );
+		$has_old_index = false;
+		$has_new_index = false;
+		$has_subject_index = false;
+		if ( ! empty( $indexes ) ) {
+			foreach ( $indexes as $idx ) {
+				if ( 'expert_rater' === $idx->Key_name ) {
+					$has_old_index = true;
+				}
+				if ( 'expert_rater_subject' === $idx->Key_name ) {
+					$has_new_index = true;
+				}
+				if ( 'subject' === $idx->Key_name ) {
+					$has_subject_index = true;
+				}
+			}
+		}
+
+		if ( $has_old_index ) {
+			$wpdb->query( "ALTER TABLE $expert_ratings_table DROP INDEX expert_rater" );
+		}
+
+		if ( ! $has_new_index ) {
+			$wpdb->query( "ALTER TABLE $expert_ratings_table ADD UNIQUE KEY expert_rater_subject (expert_id, rater_id, subject)" );
+		}
+
+		if ( ! $has_subject_index ) {
+			$wpdb->query( "ALTER TABLE $expert_ratings_table ADD KEY subject (subject)" );
 		}
 	}
 

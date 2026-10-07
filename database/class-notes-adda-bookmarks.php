@@ -64,6 +64,10 @@ class Notes_Adda_Bookmarks {
 			return new WP_Error( 'notes_adda_note_not_found', 'Note does not exist.' );
 		}
 
+		if ( 'verified' !== $note->review_status ) {
+			return new WP_Error( 'notes_adda_forbidden', 'Only verified notes can be bookmarked.' );
+		}
+
 		if ( self::has_bookmarked( $note_id, $user_id ) ) {
 			return true;
 		}
@@ -177,7 +181,7 @@ class Notes_Adda_Bookmarks {
 		$count_sql = $wpdb->prepare(
 			"SELECT COUNT(*) FROM $bookmarks_table b 
 			INNER JOIN $notes_table n ON b.note_id = n.id 
-			WHERE b.user_id = %d",
+			WHERE b.user_id = %d AND n.review_status = 'verified'",
 			$user_id
 		);
 		$total = (int) $wpdb->get_var( $count_sql );
@@ -196,7 +200,7 @@ class Notes_Adda_Bookmarks {
 			"SELECT n.*, b.created_at AS bookmarked_at 
 			FROM $bookmarks_table b 
 			INNER JOIN $notes_table n ON b.note_id = n.id 
-			WHERE b.user_id = %d 
+			WHERE b.user_id = %d AND n.review_status = 'verified' 
 			ORDER BY b.created_at DESC 
 			LIMIT %d OFFSET %d",
 			$user_id,
@@ -212,7 +216,7 @@ class Notes_Adda_Bookmarks {
 		if ( ! empty( $items ) ) {
 			foreach ( $items as &$item ) {
 				if ( empty( $item->review_status ) ) {
-					$item->review_status = 'unverified';
+					$item->review_status = 'verified';
 				}
 
 				$owner = get_userdata( (int) $item->owner_id );
@@ -227,6 +231,7 @@ class Notes_Adda_Bookmarks {
 				}
 
 				$item->is_bookmarked = true;
+				$item->is_liked      = class_exists( 'Notes_Adda_Likes' ) ? Notes_Adda_Likes::has_liked( (int) $item->id, $user_id ) : false;
 			}
 		}
 

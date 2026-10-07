@@ -24,6 +24,19 @@ class Notes_Adda_Note_Query {
 
 		$is_review_queue = ! empty( $args['is_review_queue'] );
 
+		$current_user_id = is_user_logged_in() ? get_current_user_id() : 0;
+		$super_owner_id  = (int) get_option( 'notes_adda_owner_id' );
+		$is_super_owner  = ( $super_owner_id > 0 && $current_user_id === $super_owner_id );
+		$is_admin        = $is_super_owner || user_can( $current_user_id, 'notes_adda_manage_users' ) || user_can( $current_user_id, 'manage_options' );
+		$is_reviewer     = $is_admin || user_can( $current_user_id, 'notes_adda_review_notes' );
+
+		if ( $is_review_queue && ! $is_reviewer ) {
+			return new WP_Error(
+				'notes_adda_forbidden',
+				'You do not have permission to access the Review Queue.'
+			);
+		}
+
 		$orderby_raw     = isset( $args['orderby'] ) ? strtolower( trim( $args['orderby'] ) ) : 'created_at';
 		$allowed_orderby = array( 'created_at', 'title', 'like_count' );
 		if ( ! in_array( $orderby_raw, $allowed_orderby, true ) ) {
@@ -79,10 +92,30 @@ class Notes_Adda_Note_Query {
 			}
 		}
 
-		if ( isset( $args['review_status'] ) && '' !== trim( $args['review_status'] ) && 'all' !== $args['review_status'] ) {
-			$review_status   = sanitize_key( trim( $args['review_status'] ) );
-			$where_clauses[] = 'n.review_status = %s';
-			$query_params[]  = $review_status;
+		// Visibility & Review Status enforcement:
+		if ( $is_review_queue ) {
+			// Review Queue default tab is 'pending'
+			$review_status = isset( $args['review_status'] ) ? sanitize_key( trim( $args['review_status'] ) ) : 'pending';
+			if ( empty( $review_status ) ) {
+				$review_status = 'pending';
+			}
+			if ( 'all' !== $review_status ) {
+				$where_clauses[] = 'n.review_status = %s';
+				$query_params[]  = $review_status;
+			}
+		} else {
+			// Non-review queue: If user is querying their own notes, they can see pending, verified, or rejected
+			$querying_own_notes = ( isset( $args['owner_id'] ) && (int) $args['owner_id'] > 0 && (int) $args['owner_id'] === $current_user_id );
+			if ( $querying_own_notes ) {
+				if ( isset( $args['review_status'] ) && '' !== trim( $args['review_status'] ) && 'all' !== $args['review_status'] ) {
+					$review_status   = sanitize_key( trim( $args['review_status'] ) );
+					$where_clauses[] = 'n.review_status = %s';
+					$query_params[]  = $review_status;
+				}
+			} else {
+				// Public Browse Library, search, subject filters, and bookmarks strictly return ONLY verified notes
+				$where_clauses[] = "n.review_status = 'verified'";
+			}
 		}
 
 		if ( isset( $args['subject'] ) && '' !== trim( $args['subject'] ) ) {
@@ -134,7 +167,13 @@ class Notes_Adda_Note_Query {
 		$total = (int) $wpdb->get_var( $prepared_count_sql );
 
 		if ( $is_review_queue ) {
-			$order_clause = "ORDER BY (CASE WHEN n.review_status = 'unverified' THEN 0 ELSE 1 END) ASC, n.created_at DESC";
+			$review_status_filter = isset( $args['review_status'] ) ? sanitize_key( trim( $args['review_status'] ) ) : 'pending';
+			if ( 'pending' === $review_status_filter || empty( $review_status_filter ) ) {
+				// Fairness rule: Pending queue must sort oldest first so submissions are handled fairly
+				$order_clause = 'ORDER BY n.created_at ASC';
+			} else {
+				$order_clause = 'ORDER BY n.created_at DESC';
+			}
 		} else {
 			$order_clause = "ORDER BY n.$orderby_raw $order_raw";
 		}
@@ -152,14 +191,12 @@ class Notes_Adda_Note_Query {
 			);
 		}
 
-		$current_user_id = is_user_logged_in() ? get_current_user_id() : 0;
-
-		// Decorate items with uploader name, reviewer name, bookmark status
+		// Decorate items with uploader name, reviewer name, bookmark status, and like status
 		if ( ! empty( $items ) ) {
 			foreach ( $items as &$item ) {
 				// Default review_status if not set
 				if ( empty( $item->review_status ) ) {
-					$item->review_status = 'unverified';
+					$item->review_status = 'pending';
 				}
 
 				// Owner details
@@ -171,15 +208,23 @@ class Notes_Adda_Note_Query {
 				if ( ! empty( $item->reviewed_by ) ) {
 					$reviewer = get_userdata( (int) $item->reviewed_by );
 					$item->reviewer_name = $reviewer ? $reviewer->display_name : 'Expert Reviewer';
+					if ( 'verified' === $item->review_status && class_exists( 'Notes_Adda_Ratings' ) ) {
+						$item->reviewer_rating = Notes_Adda_Ratings::get_expert_subject_summary( (int) $item->reviewed_by, $item->subject, $current_user_id );
+					} else {
+						$item->reviewer_rating = null;
+					}
 				} else {
-					$item->reviewer_name = '';
+					$item->reviewer_name   = '';
+					$item->reviewer_rating = null;
 				}
 
-				// Bookmark status
+				// Bookmark and like status
 				if ( $current_user_id > 0 ) {
 					$item->is_bookmarked = Notes_Adda_Bookmarks::has_bookmarked( (int) $item->id, $current_user_id );
+					$item->is_liked      = class_exists( 'Notes_Adda_Likes' ) ? Notes_Adda_Likes::has_liked( (int) $item->id, $current_user_id ) : false;
 				} else {
 					$item->is_bookmarked = false;
+					$item->is_liked      = false;
 				}
 			}
 		}

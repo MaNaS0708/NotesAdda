@@ -69,6 +69,10 @@ class Notes_Adda_Likes {
 			return new WP_Error( 'notes_adda_note_not_found', 'Note does not exist.' );
 		}
 
+		if ( 'verified' !== $note->review_status ) {
+			return new WP_Error( 'notes_adda_forbidden', 'Only verified notes can be liked.' );
+		}
+
 		if ( self::has_liked( $note_id, $user_id ) ) {
 			return new WP_Error( 'notes_adda_already_liked', 'You have already liked this note.' );
 		}

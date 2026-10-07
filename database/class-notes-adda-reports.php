@@ -66,6 +66,10 @@ class Notes_Adda_Reports {
 			return new WP_Error( 'notes_adda_note_not_found', 'Note does not exist.' );
 		}
 
+		if ( 'verified' !== $note->review_status ) {
+			return new WP_Error( 'notes_adda_forbidden', 'Only verified notes can be reported.' );
+		}
+
 		$reason = sanitize_textarea_field( trim( $reason ) );
 		if ( empty( $reason ) ) {
 			return new WP_Error( 'notes_adda_missing_reason', 'Report reason is required.' );

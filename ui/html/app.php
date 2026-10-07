@@ -166,6 +166,7 @@ if ( ! is_user_logged_in() ) {
                                     <a href="#review-queue" class="na-nav-item" data-view="review-queue">
                                         <span class="dashicons dashicons-shield"></span>
                                         <span class="na-nav-text">Review Queue</span>
+                                        <span id="na-pending-reviews-badge" class="na-nav-counter-badge na-badge-danger" style="display:none;" aria-label="0 notes awaiting verification">0</span>
                                     </a>
                                 </li>
                             <?php endif; ?>
@@ -211,9 +212,65 @@ if ( ! is_user_logged_in() ) {
                     <div class="na-mobile-brand">
                         <img src="<?php echo esc_url( NOTES_ADDA_URL . 'ui/assets/images/logoname.png' ); ?>" alt="Notes Adda" class="na-mobile-brand-logo" width="140" height="30" style="max-width: 160px; height: 30px; width: auto; object-fit: contain;">
                     </div>
-                    <button type="button" class="na-btn na-btn-primary na-btn-sm" id="na-mobile-new-note-btn">
-                        <span class="dashicons dashicons-plus"></span> <span>Upload</span>
-                    </button>
+                    <div class="na-mobile-actions">
+                        <div class="na-notifications-menu-wrap">
+                            <button type="button" class="na-icon-btn na-bell-btn na-notifications-toggle" aria-label="Notifications" aria-expanded="false" aria-haspopup="true">
+                                <span class="dashicons dashicons-bell"></span>
+                                <span class="na-bell-badge na-notifications-count-badge" style="display:none;" aria-label="0 unread notifications">0</span>
+                            </button>
+                            <div class="na-notifications-dropdown" style="display:none;" role="region" aria-label="Notifications">
+                                <div class="na-dropdown-header">
+                                    <div class="na-dropdown-title-wrap">
+                                        <span class="dashicons dashicons-bell"></span>
+                                        <h4 class="na-dropdown-title">Notifications</h4>
+                                    </div>
+                                    <button type="button" class="na-btn-link na-mark-all-read-btn" title="Mark all as read">Mark all read</button>
+                                </div>
+                                <div class="na-notifications-list-wrap">
+                                    <div class="na-notifications-empty" style="display:none;">
+                                        <span class="dashicons dashicons-yes-alt"></span>
+                                        <p>No notifications yet</p>
+                                    </div>
+                                    <div class="na-notifications-items"></div>
+                                </div>
+                            </div>
+                        </div>
+                        <button type="button" class="na-btn na-btn-primary na-btn-sm" id="na-mobile-new-note-btn">
+                            <span class="dashicons dashicons-plus"></span> <span>Upload</span>
+                        </button>
+                    </div>
+                </header>
+
+                <!-- Desktop Top Bar -->
+                <header class="na-desktop-topbar">
+                    <div class="na-topbar-breadcrumb">
+                        <span class="na-topbar-pulse"></span>
+                        <span class="na-topbar-breadcrumb-text">Notes Adda Network Active</span>
+                    </div>
+                    <div class="na-topbar-actions">
+                        <div class="na-notifications-menu-wrap">
+                            <button type="button" class="na-icon-btn na-bell-btn na-notifications-toggle" aria-label="Notifications" aria-expanded="false" aria-haspopup="true">
+                                <span class="dashicons dashicons-bell"></span>
+                                <span class="na-bell-badge na-notifications-count-badge" style="display:none;" aria-label="0 unread notifications">0</span>
+                            </button>
+                            <div class="na-notifications-dropdown" style="display:none;" role="region" aria-label="Notifications">
+                                <div class="na-dropdown-header">
+                                    <div class="na-dropdown-title-wrap">
+                                        <span class="dashicons dashicons-bell"></span>
+                                        <h4 class="na-dropdown-title">Notifications</h4>
+                                    </div>
+                                    <button type="button" class="na-btn-link na-mark-all-read-btn" title="Mark all as read">Mark all read</button>
+                                </div>
+                                <div class="na-notifications-list-wrap">
+                                    <div class="na-notifications-empty" style="display:none;">
+                                        <span class="dashicons dashicons-yes-alt"></span>
+                                        <p>No notifications yet</p>
+                                    </div>
+                                    <div class="na-notifications-items"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </header>
 
                 <!-- Central Library View -->
@@ -409,17 +466,21 @@ if ( ! is_user_logged_in() ) {
 
                         <!-- Review Tabs -->
                         <div class="na-review-filter-tabs">
-                            <button type="button" class="na-tab-btn active" data-review-status="unverified">
-                                <span class="dashicons dashicons-warning"></span>
-                                <span>Unverified Notes</span>
-                            </button>
-                            <button type="button" class="na-tab-btn" data-review-status="all">
-                                <span class="dashicons dashicons-list-view"></span>
-                                <span>All Notes</span>
+                            <button type="button" class="na-tab-btn active" data-review-status="pending">
+                                <span class="dashicons dashicons-clock"></span>
+                                <span>Pending Notes</span>
                             </button>
                             <button type="button" class="na-tab-btn" data-review-status="verified">
                                 <span class="dashicons dashicons-yes-alt"></span>
                                 <span>Verified Notes</span>
+                            </button>
+                            <button type="button" class="na-tab-btn" data-review-status="rejected">
+                                <span class="dashicons dashicons-dismiss"></span>
+                                <span>Rejected Notes</span>
+                            </button>
+                            <button type="button" class="na-tab-btn" data-review-status="all">
+                                <span class="dashicons dashicons-list-view"></span>
+                                <span>All Notes</span>
                             </button>
                         </div>
 
@@ -772,5 +833,75 @@ if ( ! is_user_logged_in() ) {
             </div>
         </div>
 
+        <!-- Review Decision Modal (Approve / Reject with required reason) -->
+        <div id="na-review-modal" class="na-modal-overlay">
+            <div class="na-modal-dialog">
+                <div class="na-modal-header">
+                    <h3 id="na-review-modal-title" class="na-modal-title">Review Submission</h3>
+                    <button type="button" class="na-modal-close-btn" data-modal="review" aria-label="Close modal">
+                        <span class="dashicons dashicons-no-alt"></span>
+                    </button>
+                </div>
+                <div class="na-modal-body">
+                    <form id="na-review-form" class="na-form">
+                        <input type="hidden" id="na-review-note-id" name="note_id" value="">
+                        <input type="hidden" id="na-review-action-type" name="action_type" value="verify">
+
+                        <div class="na-review-meta-preview">
+                            <div class="na-review-meta-item">
+                                <span class="na-review-meta-label">Note Title:</span>
+                                <span id="na-review-target-title" class="na-review-meta-val"></span>
+                            </div>
+                            <div class="na-review-meta-item">
+                                <span class="na-review-meta-label">Action:</span>
+                                <span id="na-review-action-badge" class="na-badge"></span>
+                            </div>
+                        </div>
+
+                        <div class="na-form-group" style="margin-top:16px;">
+                            <label for="na-review-reason">
+                                Review Reason / Moderation Note <span class="na-required">*</span>
+                            </label>
+                            <textarea id="na-review-reason" name="review_note" class="na-input na-textarea" rows="4" placeholder="Explain why this note is being approved or what must be corrected before resubmission..." required></textarea>
+                            <span class="na-form-hint">This decision explanation is sent directly to the note author in persistent notifications.</span>
+                        </div>
+
+                        <div id="na-review-modal-msg" class="na-form-message"></div>
+
+                        <div class="na-modal-footer" style="padding:0; margin-top:20px;">
+                            <button type="button" class="na-btn na-btn-ghost na-modal-close-btn" data-modal="review">Cancel</button>
+                            <button type="submit" class="na-btn" id="na-submit-review-btn">
+                                <span class="na-btn-text" id="na-submit-review-text">Submit Review</span>
+                                <span class="na-btn-spinner dashicons dashicons-update na-spin" style="display:none;"></span>
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
     <?php endif; ?>
+
+    <svg width="0" height="0" class="na-star-svg-defs" style="position:absolute; width:0; height:0; pointer-events:none;" aria-hidden="true">
+        <defs>
+            <linearGradient id="na-star-grad-100" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="100%" stop-color="#ffb703" />
+            </linearGradient>
+            <linearGradient id="na-star-grad-75" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="75%" stop-color="#ffb703" />
+                <stop offset="75%" stop-color="rgba(255,255,255,0.18)" />
+            </linearGradient>
+            <linearGradient id="na-star-grad-50" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="50%" stop-color="#ffb703" />
+                <stop offset="50%" stop-color="rgba(255,255,255,0.18)" />
+            </linearGradient>
+            <linearGradient id="na-star-grad-25" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="25%" stop-color="#ffb703" />
+                <stop offset="25%" stop-color="rgba(255,255,255,0.18)" />
+            </linearGradient>
+            <linearGradient id="na-star-grad-0" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="100%" stop-color="rgba(255,255,255,0.18)" />
+            </linearGradient>
+        </defs>
+    </svg>
 </div>

@@ -986,7 +986,7 @@
     flex: 1 1 auto;
     min-width: 0;
     margin: 0;
-    padding: 40px clamp(20px, 3.5vw, 56px) 80px;
+    padding: 0 clamp(20px, 3.5vw, 56px) 36px;
     position: relative;
     z-index: 1;
 }
@@ -2526,3 +2526,694 @@
         padding: 16px;
     }
 }
+
+/* ==================================================
+   DESKTOP TOPBAR & STATUS
+   ================================================== */
+.na-desktop-topbar {
+    display: none;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px clamp(20px, 3.5vw, 56px);
+    margin: 0 calc(-1 * clamp(20px, 3.5vw, 56px)) 20px;
+    background: rgba(10, 10, 16, 0.7);
+    border-bottom: 1px solid var(--na-line);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+}
+
+@media (min-width: 901px) {
+    .na-desktop-topbar {
+        display: flex;
+    }
+}
+
+.na-topbar-breadcrumb {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 13px;
+    color: var(--na-muted);
+}
+
+.na-topbar-pulse {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--na-brand, #00ff66);
+    box-shadow: 0 0 10px var(--na-brand, #00ff66);
+    animation: na-pulse-glow 2s infinite ease-in-out;
+}
+
+@keyframes na-pulse-glow {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.4; transform: scale(0.85); }
+}
+
+.na-topbar-actions {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+}
+
+/* ==================================================
+   NOTIFICATION BELL & DROPDOWN
+   ================================================== */
+.na-notifications-menu-wrap {
+    position: relative;
+}
+
+.na-bell-btn {
+    position: relative;
+    width: 38px;
+    height: 38px;
+    border-radius: 10px;
+    background: var(--na-surface-card);
+    border: 1px solid var(--na-line);
+    color: var(--na-ink);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.na-bell-btn:hover {
+    color: var(--na-brand, #00ff66);
+    border-color: rgba(0, 255, 102, 0.4);
+    box-shadow: 0 0 12px rgba(0, 255, 102, 0.2);
+}
+
+.na-bell-badge {
+    position: absolute;
+    top: -5px;
+    right: -5px;
+    min-width: 18px;
+    height: 18px;
+    padding: 0 5px;
+    border-radius: 9px;
+    background: var(--na-danger, #ff2a4b);
+    color: #fff;
+    font-size: 11px;
+    font-weight: 700;
+    line-height: 18px;
+    text-align: center;
+    box-shadow: 0 0 8px rgba(255, 42, 75, 0.7);
+    pointer-events: none;
+}
+
+.na-notifications-dropdown {
+    position: absolute;
+    top: calc(100% + 10px);
+    right: 0;
+    width: 360px;
+    max-width: calc(100vw - 32px);
+    background: #0d0f18;
+    border: 1px solid rgba(0, 255, 102, 0.25);
+    border-radius: 14px;
+    box-shadow: 0 16px 40px rgba(0, 0, 0, 0.85), 0 0 20px rgba(0, 255, 102, 0.1);
+    z-index: 1000;
+    overflow: hidden;
+}
+
+.na-dropdown-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 18px;
+    border-bottom: 1px solid var(--na-line);
+    background: rgba(255, 255, 255, 0.02);
+}
+
+.na-dropdown-title-wrap {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: #fff;
+}
+
+.na-dropdown-title {
+    margin: 0;
+    font-size: 14px;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+}
+
+.na-mark-all-read-btn {
+    background: none;
+    border: none;
+    color: var(--na-brand, #00ff66);
+    font-size: 12px;
+    cursor: pointer;
+    padding: 2px 6px;
+    border-radius: 4px;
+    transition: background 0.15s ease;
+}
+
+.na-mark-all-read-btn:hover {
+    background: rgba(0, 255, 102, 0.1);
+}
+
+.na-notifications-list-wrap {
+    max-height: 380px;
+    overflow-y: auto;
+}
+
+.na-notification-item {
+    display: flex;
+    gap: 12px;
+    padding: 14px 18px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+    cursor: pointer;
+    transition: background 0.15s ease;
+}
+
+.na-notification-item:hover {
+    background: rgba(255, 255, 255, 0.04);
+}
+
+.na-notification-item.unread {
+    background: rgba(0, 255, 102, 0.05);
+}
+
+.na-notif-icon-wrap {
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.na-notif-verified {
+    background: rgba(0, 255, 102, 0.16);
+    color: var(--na-brand, #00ff66);
+}
+
+.na-notif-rejected {
+    background: rgba(255, 42, 75, 0.16);
+    color: var(--na-danger, #ff2a4b);
+}
+
+.na-notif-general {
+    background: rgba(255, 255, 255, 0.08);
+    color: #fff;
+}
+
+.na-notif-content {
+    flex: 1;
+    min-width: 0;
+}
+
+.na-notif-title-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 4px;
+}
+
+.na-notif-title {
+    font-size: 13px;
+    font-weight: 700;
+    color: #fff;
+}
+
+.na-notif-unread-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--na-brand, #00ff66);
+    box-shadow: 0 0 6px var(--na-brand, #00ff66);
+    flex-shrink: 0;
+}
+
+.na-notif-msg {
+    font-size: 12px;
+    color: var(--na-ink-soft, #a0aec0);
+    margin: 0 0 6px 0;
+    line-height: 1.4;
+    word-break: break-word;
+}
+
+.na-notif-meta {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 11px;
+    color: var(--na-muted);
+}
+
+.na-notif-mark-read-btn {
+    background: none;
+    border: none;
+    color: var(--na-brand, #00ff66);
+    font-size: 11px;
+    cursor: pointer;
+    padding: 0;
+}
+
+.na-notifications-empty {
+    padding: 36px 20px;
+    text-align: center;
+    color: var(--na-muted);
+}
+
+.na-notifications-empty .dashicons {
+    font-size: 28px;
+    width: 28px;
+    height: 28px;
+    margin-bottom: 8px;
+    opacity: 0.5;
+}
+
+/* ==================================================
+   PENDING REVIEWS RED DOT BADGE (SIDEBAR)
+   ================================================== */
+#na-pending-reviews-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 18px;
+    height: 18px;
+    padding: 0 6px;
+    border-radius: 9px;
+    background: var(--na-danger, #ff2a4b);
+    color: #fff;
+    font-size: 11px;
+    font-weight: 700;
+    margin-left: auto;
+    box-shadow: 0 0 10px rgba(255, 42, 75, 0.6);
+}
+
+/* ==================================================
+   REVIEW QUEUE CARDS & DECISION MODAL
+   ================================================== */
+.na-badge-pending {
+    background: var(--na-warning-soft);
+    color: var(--na-warning);
+    border: 1px solid rgba(255, 170, 0, 0.35);
+}
+
+.na-badge-rejected {
+    background: rgba(255, 42, 75, 0.16);
+    color: var(--na-danger, #ff2a4b);
+    border: 1px solid rgba(255, 42, 75, 0.4);
+    box-shadow: 0 0 8px rgba(255, 42, 75, 0.2);
+}
+
+.na-status-badge.na-status-rejected {
+    background: rgba(255, 42, 75, 0.16);
+    color: var(--na-danger, #ff2a4b);
+    border: 1px solid rgba(255, 42, 75, 0.3);
+}
+
+.na-review-card.rejected-card {
+    border-left: 3px solid var(--na-danger, #ff2a4b);
+}
+
+.na-review-card.pending-card {
+    border-left: 3px solid var(--na-warning, #ffaa00);
+}
+
+.na-review-meta-preview {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid var(--na-line);
+    border-radius: 8px;
+    padding: 12px 14px;
+}
+
+.na-review-meta-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 6px;
+}
+
+.na-review-meta-item:last-child {
+    margin-bottom: 0;
+}
+
+.na-review-meta-label {
+    font-size: 12px;
+    color: var(--na-muted);
+}
+
+.na-review-meta-val {
+    font-weight: 600;
+    color: #fff;
+    font-size: 13px;
+}
+
+/* ==================================================
+   EXPERT RATINGS COMPONENT
+   ================================================== */
+.na-expert-rating-section {
+    transition: opacity 0.2s ease;
+}
+
+.na-star-btn {
+    transition: transform 0.15s ease, color 0.15s ease;
+}
+
+.na-star-btn:hover {
+    transform: scale(1.2);
+    color: #ffd700 !important;
+}
+
+/* ==================================================
+   CYBER TOAST NOTIFICATIONS
+   ================================================== */
+#na-toast {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    background: #0e111a;
+    border: 1px solid var(--na-line);
+    border-radius: 10px;
+    padding: 12px 20px;
+    color: #fff;
+    font-size: 13px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    z-index: 99999;
+    opacity: 0;
+    transform: translateY(16px);
+    pointer-events: none;
+    transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.7);
+}
+
+#na-toast.show {
+    opacity: 1;
+    transform: translateY(0);
+    pointer-events: auto;
+}
+
+#na-toast.na-toast-success {
+    border-color: rgba(0, 255, 102, 0.5);
+    box-shadow: 0 0 20px rgba(0, 255, 102, 0.2);
+    color: #fff;
+}
+
+#na-toast.na-toast-success .dashicons {
+    color: var(--na-brand, #00ff66);
+}
+
+#na-toast.na-toast-error {
+    border-color: rgba(255, 42, 75, 0.5);
+    box-shadow: 0 0 20px rgba(255, 42, 75, 0.2);
+    color: #fff;
+}
+
+#na-toast.na-toast-error .dashicons {
+    color: var(--na-danger, #ff2a4b);
+}
+
+#na-toast.na-toast-warning {
+    border-color: rgba(255, 170, 0, 0.5);
+    box-shadow: 0 0 20px rgba(255, 170, 0, 0.2);
+    color: #fff;
+}
+
+#na-toast.na-toast-warning .dashicons {
+    color: var(--na-warning, #ffaa00);
+}
+
+.na-pagination-container:empty {
+    display: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+}
+
+/* ==================================================
+   QUARTER-STAR RATING & REVIEWER BADGES
+   ================================================== */
+.na-quarter-stars {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+    vertical-align: middle;
+}
+.na-star-svg {
+    display: inline-block;
+    flex-shrink: 0;
+}
+
+/* Card Reviewer Box (Verified Notes in Library/Home) */
+.na-card-reviewer-box {
+    margin: 10px 0 6px 0;
+    padding: 8px 10px;
+    background: rgba(255, 183, 3, 0.05);
+    border: 1px solid rgba(255, 183, 3, 0.2);
+    border-radius: 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+.na-card-reviewer-line {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    color: #e2e8f0;
+}
+.na-card-reviewer-icon {
+    color: #ffb703;
+    font-size: 15px;
+    width: 15px;
+    height: 15px;
+    line-height: 15px;
+}
+.na-card-rating-line {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+}
+.na-card-rating-score {
+    font-weight: 700;
+    color: #ffb703;
+    font-size: 12px;
+}
+.na-card-rating-count {
+    color: var(--na-muted, #94a3b8);
+    font-size: 11px;
+}
+.na-card-overall-line {
+    font-size: 11px;
+    color: var(--na-muted, #94a3b8);
+    border-top: 1px dashed rgba(255, 255, 255, 0.08);
+    padding-top: 3px;
+    margin-top: 2px;
+}
+
+/* Reviewer Card in Note Details Page */
+.na-reviewer-card {
+    border-color: rgba(255, 183, 3, 0.25);
+    background: linear-gradient(180deg, rgba(255, 183, 3, 0.04) 0%, rgba(15, 23, 42, 0.6) 100%);
+}
+.na-reviewer-profile-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 12px;
+}
+.na-reviewer-avatar-wrap {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: rgba(255, 183, 3, 0.15);
+    border: 1px solid rgba(255, 183, 3, 0.3);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+.na-reviewer-avatar-wrap .na-reviewer-icon {
+    color: #ffb703;
+    font-size: 22px;
+    width: 22px;
+    height: 22px;
+}
+.na-reviewer-name {
+    font-weight: 700;
+    font-size: 14px;
+    color: #fff;
+}
+.na-reviewer-subcontext {
+    font-size: 12px;
+    color: var(--na-muted, #94a3b8);
+}
+.na-reviewer-subcontext strong {
+    color: #ffb703;
+}
+.na-reviewer-stats-block {
+    background: rgba(0, 0, 0, 0.3);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 8px;
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+.na-reviewer-primary-rating {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+.na-reviewer-numeric-score {
+    font-size: 18px;
+    font-weight: 800;
+    color: #ffb703;
+}
+.na-reviewer-score-denom {
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--na-muted, #94a3b8);
+}
+.na-reviewer-subtext {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    font-size: 12px;
+    color: var(--na-muted, #94a3b8);
+}
+.na-reviewer-overall-context {
+    font-size: 11px;
+    color: var(--na-muted, #94a3b8);
+    border-top: 1px solid rgba(255, 255, 255, 0.06);
+    padding-top: 6px;
+    margin-top: 4px;
+}
+
+/* Interactive Rating Control */
+.na-contextual-rating-widget {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+.na-rating-ctrl-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+}
+.na-rating-ctrl-label {
+    font-size: 12px;
+    color: #e2e8f0;
+}
+.na-rating-ctrl-label strong {
+    color: #fff;
+}
+.na-rating-ctrl-label em {
+    color: #ffb703;
+    font-style: normal;
+}
+.na-rating-val-badge {
+    background: rgba(255, 183, 3, 0.15);
+    border: 1px solid rgba(255, 183, 3, 0.3);
+    border-radius: 4px;
+    padding: 2px 6px;
+    font-size: 12px;
+    font-weight: 700;
+    color: #ffb703;
+    white-space: nowrap;
+}
+.na-rating-slider-row {
+    width: 100%;
+}
+.na-rating-slider {
+    width: 100%;
+    -webkit-appearance: none;
+    appearance: none;
+    height: 6px;
+    border-radius: 3px;
+    background: rgba(255, 255, 255, 0.15);
+    outline: none;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+.na-rating-slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: #ffb703;
+    cursor: pointer;
+    box-shadow: 0 0 10px rgba(255, 183, 3, 0.6);
+    border: 2px solid #0f172a;
+    transition: transform 0.1s, box-shadow 0.1s;
+}
+.na-rating-slider::-webkit-slider-thumb:hover {
+    transform: scale(1.15);
+    box-shadow: 0 0 14px rgba(255, 183, 3, 0.9);
+}
+.na-rating-slider::-moz-range-thumb {
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: #ffb703;
+    cursor: pointer;
+    box-shadow: 0 0 10px rgba(255, 183, 3, 0.6);
+    border: 2px solid #0f172a;
+}
+.na-rating-stars-live-preview {
+    display: flex;
+    justify-content: center;
+    margin: 2px 0;
+}
+.na-rating-presets-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+    font-size: 11px;
+}
+.na-preset-label {
+    color: var(--na-muted, #94a3b8);
+    margin-right: 2px;
+}
+.na-preset-btn {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 4px;
+    color: #e2e8f0;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 2px 6px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+.na-preset-btn:hover {
+    background: rgba(255, 183, 3, 0.2);
+    border-color: rgba(255, 183, 3, 0.4);
+    color: #ffb703;
+}
+.na-rating-action-row {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-top: 4px;
+}
+.na-current-rated-notice {
+    font-size: 11px;
+    color: var(--na-brand, #00ff66);
+}
+.na-self-rating-notice {
+    background: rgba(255, 255, 255, 0.04);
+    border-radius: 6px;
+    padding: 8px 12px;
+    font-size: 12px;
+    color: var(--na-muted, #94a3b8);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-style: italic;
+}
+

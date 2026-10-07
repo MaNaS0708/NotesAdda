@@ -13,7 +13,7 @@
         currentPage: 1,
         activeView: 'library',
         subjects: [],
-        reviewFilter: 'unverified',
+        reviewFilter: 'pending',
         subjectRequestFilter: 'pending',
         adminSubjectRequests: [],
         mySubjectRequests: [],
@@ -27,6 +27,11 @@
 
             if (NotesAdda.is_logged_in) {
                 this.loadSubjects();
+                this.loadNotifications();
+
+                if (NotesAdda.can_review) {
+                    this.loadPendingReviewCount();
+                }
 
                 const urlParams = new URLSearchParams(window.location.search);
                 if (urlParams.has('note_id')) {
@@ -246,6 +251,8 @@
                     $('#na-note-form-modal').removeClass('open');
                 } else if (modalKey === 'details') {
                     $('#na-note-details-modal').removeClass('open');
+                } else if (modalKey === 'review') {
+                    $('#na-review-modal').removeClass('open');
                 } else {
                     $('.na-modal-overlay').removeClass('open');
                 }
@@ -351,14 +358,20 @@
             });
 
             $(document).on('click', '.na-btn-like', function(e) {
+                e.preventDefault();
                 e.stopPropagation();
                 const $btn = $(this);
+                if ($btn.hasClass('na-in-flight') || $btn.prop('disabled')) {
+                    return;
+                }
                 const id = $btn.data('id') || $btn.closest('.na-card, .na-review-card, .na-note-page-content').data('id');
+                if (!id) return;
                 const isLiked = $btn.hasClass('liked');
                 self.toggleLike(id, isLiked, $btn);
             });
 
             $(document).on('click', '.na-btn-bookmark', function(e) {
+                e.preventDefault();
                 e.stopPropagation();
                 const $btn = $(this);
                 const id = $btn.data('id') || $btn.closest('.na-card, .na-review-card, .na-note-page-content').data('id');
@@ -366,6 +379,7 @@
             });
 
             $(document).on('click', '#na-modal-bookmark-btn', function(e) {
+                e.preventDefault();
                 e.stopPropagation();
                 const $btn = $(this);
                 const id = $btn.data('id');
@@ -373,6 +387,7 @@
             });
 
             $(document).on('click', '.na-btn-report', function(e) {
+                e.preventDefault();
                 e.stopPropagation();
                 const $btn = $(this);
                 const id = $btn.data('id') || $btn.closest('.na-card, .na-review-card, .na-note-page-content').data('id');
@@ -392,19 +407,153 @@
                 self.loadReviewQueue();
             });
 
-            // Review Actions (Verify / Mark Unverified)
-            $(document).on('click', '.na-btn-verify', function(e) {
+            // Review Action Buttons (Approve / Reject -> Open Review Modal)
+            $(document).on('click', '.na-btn-review-action', function(e) {
+                e.preventDefault();
                 e.stopPropagation();
                 const $btn = $(this);
                 const id = $btn.data('id') || $btn.closest('.na-review-card, .na-note-page-content').data('id');
-                self.submitReview(id, 'verified', $btn);
+                const action = $btn.data('action'); // 'verify' or 'reject'
+                const title = $btn.data('title') || $btn.closest('.na-review-card').find('.na-review-card-title').text() || $('#na-review-target-title').text();
+                self.openReviewModal(id, action, title);
             });
 
-            $(document).on('click', '.na-btn-unverify', function(e) {
+            // Review Modal Form Submission
+            $('#na-review-form').on('submit', function(e) {
+                e.preventDefault();
+                self.submitReviewModal();
+            });
+
+            // Notifications Bell & Dropdown Toggle
+            $(document).on('click', '.na-notifications-toggle', function(e) {
+                e.preventDefault();
                 e.stopPropagation();
+                const $menu = $(this).closest('.na-notifications-menu-wrap');
+                const $dropdown = $menu.find('.na-notifications-dropdown');
+                const isOpen = $dropdown.is(':visible');
+
+                $('.na-notifications-dropdown').hide();
+                $('.na-notifications-toggle').attr('aria-expanded', 'false');
+
+                if (!isOpen) {
+                    $dropdown.show();
+                    $(this).attr('aria-expanded', 'true');
+                    self.loadNotifications();
+                }
+            });
+
+            // Close notifications dropdown on outside click
+            $(document).on('click', function(e) {
+                if ($(e.target).closest('.na-notifications-menu-wrap').length === 0) {
+                    $('.na-notifications-dropdown').hide();
+                    $('.na-notifications-toggle').attr('aria-expanded', 'false');
+                }
+            });
+
+            // Mark All Notifications Read
+            $(document).on('click', '.na-mark-all-read-btn', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                self.markAllNotificationsRead();
+            });
+
+            // Notification Item Click (open note or mark read)
+            $(document).on('click', '.na-notification-item', function(e) {
+                if ($(e.target).closest('.na-notif-mark-read-btn').length > 0) return;
+                const $item = $(this);
+                const id = $item.data('id');
+                const noteId = $item.data('note-id');
+
+                if (id && $item.hasClass('unread')) {
+                    self.markNotificationRead(id);
+                }
+
+                if (noteId) {
+                    $('.na-notifications-dropdown').hide();
+                    $('.na-notifications-toggle').attr('aria-expanded', 'false');
+                    self.openNoteDetailsPage(parseInt(noteId), true);
+                }
+            });
+
+            // Notification Mark Read Button
+            $(document).on('click', '.na-notif-mark-read-btn', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                const id = $(this).data('id');
+                if (id) {
+                    self.markNotificationRead(id);
+                }
+            });
+
+            // Contextual Quarter-Star Rating Slider & Controls
+            $(document).on('input change', '.na-rating-slider', function() {
+                const $slider = $(this);
+                const $widget = $slider.closest('.na-contextual-rating-widget');
+                const val = parseFloat($slider.val()) || 5.00;
+                const valStr = Number(val).toFixed(2);
+                $widget.find('.na-rating-val-number').text(valStr);
+                $widget.find('.na-rating-stars-live-preview').html(self.renderQuarterStarsHtml(val, 22));
+                const expertName = $widget.find('.na-rating-ctrl-label strong').text() || 'Expert';
+                $slider.attr('aria-label', `Rate ${expertName} ${valStr} out of 5 stars`);
+                const hasRated = !!$widget.data('current-user-rating');
+                $widget.find('.na-submit-rating-btn .na-btn-text').text((hasRated ? 'Update Rating to ' : 'Submit Rating of ') + valStr);
+            });
+
+            $(document).on('click', '.na-preset-btn', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                const val = parseFloat($(this).data('val'));
+                const $widget = $(this).closest('.na-contextual-rating-widget');
+                const $slider = $widget.find('.na-rating-slider');
+                $slider.val(val).trigger('input');
+            });
+
+            $(document).on('click', '.na-submit-rating-btn', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                if (!NotesAdda.is_logged_in) {
+                    self.showToast('Please sign in to rate experts.', 'warning');
+                    return;
+                }
+                const $widget = $(this).closest('.na-contextual-rating-widget');
+                const expertId = parseInt($widget.data('expert-id'));
+                const subject = String($widget.data('subject') || '');
+                const rating = parseFloat($widget.find('.na-rating-slider').val());
+                if (!expertId || !subject || !rating) return;
+
+                self.submitExpertRating(expertId, subject, rating, $widget);
+            });
+
+            // Fallback for star click
+            $(document).on('click', '.na-star-btn', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                if (!NotesAdda.is_logged_in) {
+                    self.showToast('Please sign in to rate experts.', 'warning');
+                    return;
+                }
                 const $btn = $(this);
-                const id = $btn.data('id') || $btn.closest('.na-review-card, .na-note-page-content').data('id');
-                self.submitReview(id, 'unverified', $btn);
+                const star = parseFloat($btn.data('star'));
+                const $container = $btn.closest('[data-expert-id]');
+                const expertId = parseInt($container.data('expert-id'));
+                const subject = String($container.data('subject') || '');
+                if (!expertId || !star || !subject) return;
+
+                self.submitExpertRating(expertId, subject, star, $container);
+            });
+
+            // Resubmit Rejected Note Button Click
+            $(document).on('click', '.na-btn-resubmit-note', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                const id = $(this).data('id') || $(this).closest('.na-card, .na-note-page-content').data('id');
+                if (id) {
+                    $.get(NotesAdda.ajax_url, { action: 'notes_adda_get_note_details', note_id: id }, function(res) {
+                        if (res.success && res.data) {
+                            self.openFormModal(res.data);
+                        }
+                    });
+                }
             });
 
             // Subject Management Add Form
@@ -522,6 +671,10 @@
 
             $('.na-view').removeClass('active').hide();
             $('#na-view-' + view).addClass('active').show();
+
+            if (NotesAdda.can_review) {
+                this.loadPendingReviewCount();
+            }
 
             if (view === 'library' || view === 'my-notes' || view === 'bookmarks') {
                 this.loadNotes(view);
@@ -716,29 +869,83 @@
                 const isAdmin = !!(NotesAdda.is_owner || NotesAdda.can_manage_users || NotesAdda.user_role === 'admin');
                 const canDelete = isOwner || isAdmin;
                 const canEdit = isOwner || isAdmin;
-                const isVerified = (note.review_status === 'verified');
+                const status = note.review_status || 'pending';
+                const isVerified = (status === 'verified');
+                const isPending = (status === 'pending');
+                const isRejected = (status === 'rejected');
                 const isBookmarked = !!note.is_bookmarked;
+                const isLiked = !!note.is_liked;
+
+                let statusBadgeHtml = '';
+                if (isVerified) {
+                    statusBadgeHtml = `
+                        <span class="na-badge na-badge-verified" title="Verified by subject expert">
+                            <span class="dashicons dashicons-yes-alt"></span> Expert Verified
+                        </span>
+                    `;
+                } else if (isRejected) {
+                    statusBadgeHtml = `
+                        <span class="na-badge na-badge-rejected" title="Submission rejected by reviewer">
+                            <span class="dashicons dashicons-dismiss"></span> Rejected
+                        </span>
+                    `;
+                } else {
+                    statusBadgeHtml = `
+                        <span class="na-badge na-badge-pending" title="Awaiting expert verification">
+                            <span class="dashicons dashicons-clock"></span> Pending Review
+                        </span>
+                    `;
+                }
+
+                let reviewerCardHtml = '';
+                if (isVerified && note.reviewed_by) {
+                    const rr = note.reviewer_rating;
+                    const avgScore = (rr && rr.has_ratings) ? parseFloat(rr.average) : 0;
+                    const formattedScore = (rr && rr.has_ratings) ? rr.formatted_average : '';
+                    const ratingCount = (rr && rr.has_ratings) ? parseInt(rr.count) : 0;
+                    const diff = (rr && rr.has_ratings && rr.has_overall_ratings) ? Math.abs(avgScore - parseFloat(rr.overall_average)) : 0;
+                    const showOverallDiff = (rr && rr.has_overall_ratings && diff >= 0.25);
+
+                    reviewerCardHtml = `
+                        <div class="na-card-reviewer-box" data-reviewer-id="${note.reviewed_by}" data-subject="${self.escapeHtml(note.subject || '')}">
+                            <div class="na-card-reviewer-line">
+                                <span class="dashicons dashicons-awards na-card-reviewer-icon"></span>
+                                <span class="na-card-reviewer-text">Reviewed by <strong>${self.escapeHtml(note.reviewer_name || 'Subject Expert')}</strong></span>
+                            </div>
+                            <div class="na-card-rating-line">
+                                ${self.renderQuarterStarsHtml(avgScore, 14)}
+                                <span class="na-card-rating-score">${formattedScore ? `${formattedScore} / 5` : 'No ratings yet'}</span>
+                                ${ratingCount > 0 ? `<span class="na-card-rating-count">(${ratingCount} rating${ratingCount === 1 ? '' : 's'})</span>` : ''}
+                            </div>
+                            ${showOverallDiff ? `
+                                <div class="na-card-overall-line">
+                                    <span class="na-card-overall-text">Overall: ${rr.formatted_overall_average} / 5 (${rr.overall_total} total)</span>
+                                </div>
+                            ` : ''}
+                        </div>
+                    `;
+                }
 
                 const html = `
-                    <article class="na-card ${isVerified ? 'na-card-verified' : ''}" data-id="${note.id}">
+                    <article class="na-card ${isVerified ? 'na-card-verified' : (isRejected ? 'na-card-rejected' : 'na-card-pending')}" data-id="${note.id}" data-subject="${self.escapeHtml(note.subject || '')}" data-reviewer-id="${note.reviewed_by || ''}">
                         <div class="na-card-top">
                             <div class="na-badge-group">
                                 <span class="na-badge na-badge-subject">${self.escapeHtml(note.subject || 'General')}</span>
                                 ${note.chapter ? `<span class="na-badge na-badge-chapter">${self.escapeHtml(note.chapter)}</span>` : ''}
                                 ${parseInt(note.is_whole_notes) === 1 ? `<span class="na-badge na-badge-whole">Full Course</span>` : ''}
-                                ${isVerified ? `
-                                    <span class="na-badge na-badge-verified" title="Verified by subject expert">
-                                        <span class="dashicons dashicons-yes-alt"></span> Expert Verified
-                                    </span>
-                                ` : `
-                                    <span class="na-badge na-badge-unverified" title="Community upload (unverified)">
-                                        <span class="dashicons dashicons-warning"></span> Unverified
-                                    </span>
-                                `}
+                                ${statusBadgeHtml}
                             </div>
                         </div>
                         <h3 class="na-card-title">${self.escapeHtml(note.title)}</h3>
                         <p class="na-card-desc">${self.escapeHtml(note.description || 'No description provided.')}</p>
+
+                        ${isRejected && isOwner && note.review_note ? `
+                            <div class="na-card-rejection-note" style="margin:8px 0; padding:8px 10px; background:rgba(255,42,75,0.12); border-left:3px solid var(--na-danger, #ff2a4b); border-radius:4px; font-size:12px; color:var(--na-danger, #ff2a4b);">
+                                <strong>Reviewer Feedback:</strong> ${self.escapeHtml(note.review_note)}
+                            </div>
+                        ` : ''}
+
+                        ${reviewerCardHtml}
                         <div class="na-card-tags" id="na-tags-${note.id}"></div>
                         <div class="na-card-bottom">
                             <span class="na-card-date">
@@ -746,30 +953,37 @@
                                 ${self.formatDate(note.created_at)}
                             </span>
                             <div class="na-card-actions">
-                                <button type="button" class="na-icon-btn na-btn-view" title="Preview note" aria-label="Preview ${self.escapeHtml(note.title)}">
+                                <button type="button" class="na-icon-btn na-btn-view" data-id="${note.id}" title="Preview note" aria-label="Preview ${self.escapeHtml(note.title)}">
                                     <span class="dashicons dashicons-visibility"></span>
                                 </button>
                                 ${note.file_url ? `
                                 <a href="${self.escapeHtml(note.file_url)}" target="_blank" rel="noopener noreferrer" class="na-icon-btn" title="Open PDF" aria-label="Open PDF for ${self.escapeHtml(note.title)}">
                                     <span class="dashicons dashicons-pdf"></span>
                                 </a>` : ''}
+                                ${isVerified ? `
                                 <button type="button" class="na-icon-btn na-btn-bookmark ${isBookmarked ? 'bookmarked' : ''}" data-id="${note.id}" title="${isBookmarked ? 'Remove saved note' : 'Save note'}" aria-label="${isBookmarked ? 'Remove saved note' : 'Save note'}">
                                     <svg viewBox="0 0 24 24" class="na-svg-bookmark" width="16" height="16" fill="${isBookmarked ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
                                 </button>
-                                <button type="button" class="na-icon-btn na-btn-like" title="Like note" aria-label="Like ${self.escapeHtml(note.title)}">
+                                <button type="button" class="na-icon-btn na-btn-like ${isLiked ? 'liked' : ''}" data-id="${note.id}" title="Like note" aria-label="Like ${self.escapeHtml(note.title)}">
                                     <span class="dashicons dashicons-heart"></span>
                                     <span class="like-count">${note.like_count || 0}</span>
                                 </button>
-                                ${canEdit ? `
-                                <button type="button" class="na-icon-btn na-btn-edit" title="Edit Note">
+                                ` : ''}
+                                ${isRejected && isOwner ? `
+                                <button type="button" class="na-btn na-btn-secondary na-btn-sm na-btn-resubmit-note" data-id="${note.id}" title="Edit and resubmit note" style="font-size:11px; padding:3px 8px;">
+                                    <span class="dashicons dashicons-update"></span> Edit & Resubmit
+                                </button>
+                                ` : ''}
+                                ${canEdit && !isRejected ? `
+                                <button type="button" class="na-icon-btn na-btn-edit" data-id="${note.id}" title="Edit Note">
                                     <span class="dashicons dashicons-edit"></span>
                                 </button>` : ''}
                                 ${canDelete ? `
-                                <button type="button" class="na-icon-btn na-danger-hover na-btn-delete" title="Delete Note">
+                                <button type="button" class="na-icon-btn na-danger-hover na-btn-delete" data-id="${note.id}" title="Delete Note">
                                     <span class="dashicons dashicons-trash"></span>
                                 </button>` : ''}
-                                ${!isOwner ? `
-                                <button type="button" class="na-icon-btn na-btn-report" title="Report Note">
+                                ${!isOwner && isVerified ? `
+                                <button type="button" class="na-icon-btn na-btn-report" data-id="${note.id}" title="Report Note">
                                     <span class="dashicons dashicons-flag"></span>
                                 </button>` : ''}
                             </div>
@@ -784,8 +998,10 @@
                 // Fetch tags
                 self.loadCardTags(note.id);
 
-                // Fetch like status
-                self.checkLikeStatus(note.id, $card.find('.na-btn-like'));
+                // Fetch like status if verified
+                if (isVerified) {
+                    self.checkLikeStatus(note.id, $card.find('.na-btn-like'));
+                }
             });
         },
 
@@ -827,7 +1043,8 @@
             this.populateSubjectDropdowns();
 
             if (noteData) {
-                $('#na-note-form-title').text('Edit Note');
+                const isRejected = (noteData.review_status === 'rejected');
+                $('#na-note-form-title').text(isRejected ? 'Edit & Resubmit Note for Review' : 'Edit Note');
                 $('#na-note-id').val(noteData.id);
                 $('#na-note-title').val(noteData.title);
                 $('#na-note-subject').val(noteData.subject);
@@ -838,7 +1055,10 @@
                 $('#na-note-file-url').val(noteData.file_url || '');
                 $('#na-file-name-display').text(noteData.file_url ? 'Current PDF: ' + noteData.file_url.split('/').pop() : 'Select a new PDF if you wish to replace');
                 $('#na-note-is-whole').prop('checked', parseInt(noteData.is_whole_notes) === 1);
-                $('#na-save-note-btn .na-btn-text').text('Update Note');
+                $('#na-save-note-btn .na-btn-text').text(isRejected ? 'Resubmit for Review' : 'Update Note');
+                if (isRejected && noteData.review_note) {
+                    $msg.text('Reviewer feedback: "' + noteData.review_note + '". Editing and saving will resubmit this note to the review queue.').addClass('warning');
+                }
 
                 $.get(NotesAdda.ajax_url, {
                     action: 'notes_adda_get_note_tags',
@@ -1005,8 +1225,12 @@
 
         finishSave: function() {
             $('#na-note-form-modal').removeClass('open');
+            this.showToast('Note saved successfully.', 'success');
             this.loadNotes(this.activeView);
             this.loadSubjects();
+            if (NotesAdda.can_review) {
+                this.loadPendingReviewCount();
+            }
         },
 
         deleteNote: function(id) {
@@ -1017,6 +1241,7 @@
                 _ajax_nonce: NotesAdda.nonce
             }, function(res) {
                 if (res.success) {
+                    self.showToast('Note deleted successfully.', 'success');
                     if (self.activeView === 'note-details') {
                         const url = new URL(window.location.href);
                         url.searchParams.delete('note_id');
@@ -1030,15 +1255,23 @@
                         self.loadNotes(self.activeView);
                     }
                     self.loadSubjects();
+                    if (NotesAdda.can_review) {
+                        self.loadPendingReviewCount();
+                    }
                 } else {
-                    alert('Error: ' + (res.data ? res.data.message : 'Could not delete note.'));
+                    const err = (res.data && res.data.message) ? res.data.message : 'Could not delete note.';
+                    self.showToast(err, 'error');
                 }
+            }).fail(function(xhr) {
+                const err = (xhr.responseJSON && xhr.responseJSON.data && xhr.responseJSON.data.message) ? xhr.responseJSON.data.message : 'Failed to delete note.';
+                self.showToast(err, 'error');
             });
         },
 
         toggleLike: function(id, isLiked, $btn) {
+            const self = this;
             if (!NotesAdda.is_logged_in) {
-                alert('Please sign in to like notes.');
+                self.showToast('Please sign in to like notes.', 'warning');
                 return;
             }
 
@@ -1047,8 +1280,11 @@
             const newCount = isLiked ? Math.max(0, currentCount - 1) : currentCount + 1;
             const newLiked = !isLiked;
 
+            const $matchingBtns = $(`.na-btn-like[data-id="${id}"]`);
+            $matchingBtns.addClass('na-in-flight');
+
             // Optimistic update everywhere for this note
-            $(`.na-btn-like[data-id="${id}"]`)
+            $matchingBtns
                 .toggleClass('liked', newLiked)
                 .find('.like-count').text(newCount);
             $('#na-detail-like-count').text(newCount);
@@ -1058,22 +1294,29 @@
                 note_id: id,
                 _ajax_nonce: NotesAdda.nonce
             }, function(res) {
+                $matchingBtns.removeClass('na-in-flight');
                 if (res.success) {
-                    $(`.na-btn-like[data-id="${id}"]`)
+                    $matchingBtns
+                        .toggleClass('liked', !!res.data.is_liked)
                         .find('.like-count').text(res.data.like_count);
                     $('#na-detail-like-count').text(res.data.like_count);
                 } else {
                     // Revert if error
-                    $(`.na-btn-like[data-id="${id}"]`)
+                    $matchingBtns
                         .toggleClass('liked', isLiked)
                         .find('.like-count').text(currentCount);
                     $('#na-detail-like-count').text(currentCount);
+                    const msg = (res.data && res.data.message) ? res.data.message : 'Could not update like.';
+                    self.showToast(msg, 'error');
                 }
-            }).fail(function() {
-                $(`.na-btn-like[data-id="${id}"]`)
+            }).fail(function(xhr) {
+                $matchingBtns.removeClass('na-in-flight');
+                $matchingBtns
                     .toggleClass('liked', isLiked)
                     .find('.like-count').text(currentCount);
                 $('#na-detail-like-count').text(currentCount);
+                const msg = (xhr.responseJSON && xhr.responseJSON.data && xhr.responseJSON.data.message) ? xhr.responseJSON.data.message : 'Network error updating like.';
+                self.showToast(msg, 'error');
             });
         },
 
@@ -1211,17 +1454,47 @@
             const self = this;
             const $container = $('#na-note-details-container');
             const isOwner = (parseInt(note.owner_id) === parseInt(NotesAdda.user_id));
-            const isVerified = (note.review_status === 'verified');
+            const status = note.review_status || 'pending';
+            const isVerified = (status === 'verified');
+            const isPending = (status === 'pending');
+            const isRejected = (status === 'rejected');
             const isBookmarked = !!note.is_bookmarked;
             const isLiked = !!note.is_liked;
             const contributor = note.contributor || {};
             const tags = note.tags || [];
+            const rr = note.reviewer_rating;
+            const isViewerTheReviewer = (NotesAdda.user_id && parseInt(NotesAdda.user_id) === parseInt(note.reviewed_by));
 
             let tagsHtml = '';
             if (tags.length > 0) {
                 tagsHtml = tags.map(function(t) {
                     return `<span class="na-tag">#${self.escapeHtml(t.name)}</span>`;
                 }).join('');
+            }
+
+            let statusBadgeHtml = '';
+            let statusSidebarHtml = '';
+            if (isVerified) {
+                statusBadgeHtml = `
+                    <span class="na-badge na-badge-verified">
+                        <span class="dashicons dashicons-yes-alt"></span> Expert Verified
+                    </span>
+                `;
+                statusSidebarHtml = '<span class="na-status-badge na-status-approved"><span class="dashicons dashicons-yes-alt"></span> Verified</span>';
+            } else if (isRejected) {
+                statusBadgeHtml = `
+                    <span class="na-badge na-badge-rejected">
+                        <span class="dashicons dashicons-dismiss"></span> Rejected
+                    </span>
+                `;
+                statusSidebarHtml = '<span class="na-status-badge na-status-rejected" style="color:var(--na-danger);"><span class="dashicons dashicons-dismiss"></span> Rejected</span>';
+            } else {
+                statusBadgeHtml = `
+                    <span class="na-badge na-badge-pending">
+                        <span class="dashicons dashicons-clock"></span> Pending Review
+                    </span>
+                `;
+                statusSidebarHtml = '<span class="na-status-badge na-status-pending"><span class="dashicons dashicons-clock"></span> Pending Review</span>';
             }
 
             const html = `
@@ -1234,35 +1507,36 @@
                                 <span class="na-badge na-badge-subject">${self.escapeHtml(note.subject || 'General')}</span>
                                 ${note.chapter ? `<span class="na-badge na-badge-chapter">${self.escapeHtml(note.chapter)}</span>` : ''}
                                 ${parseInt(note.is_whole_notes) === 1 ? `<span class="na-badge na-badge-whole">Full Course</span>` : ''}
-                                ${isVerified ? `
-                                    <span class="na-badge na-badge-verified">
-                                        <span class="dashicons dashicons-yes-alt"></span> Expert Verified
-                                    </span>
-                                ` : `
-                                    <span class="na-badge na-badge-unverified">
-                                        <span class="dashicons dashicons-warning"></span> Unverified
-                                    </span>
-                                `}
+                                ${statusBadgeHtml}
                             </div>
 
                             <!-- 2. Note Title -->
                             <h1 class="na-note-page-title">${self.escapeHtml(note.title)}</h1>
 
-                            <!-- 3. Verification Warning Banner (if unverified) -->
-                            ${!isVerified ? `
+                            <!-- 3. Verification / Moderation Status Banner -->
+                            ${isPending ? `
                                 <div class="na-unverified-warning" style="margin: 20px 0;">
-                                    <div class="na-warning-icon"><span class="dashicons dashicons-warning"></span></div>
+                                    <div class="na-warning-icon"><span class="dashicons dashicons-clock"></span></div>
                                     <div class="na-warning-text">
-                                        This community note has not been verified by an expert. Please check the material independently before relying on it.
+                                        <strong>This note is currently awaiting expert verification.</strong> It is kept private to you and the moderation team until approved.
+                                    </div>
+                                </div>
+                            ` : (isRejected ? `
+                                <div class="na-unverified-warning" style="margin: 20px 0; border-color: rgba(255,42,75,0.4); background: rgba(255,42,75,0.08);">
+                                    <div class="na-warning-icon" style="color:var(--na-danger, #ff2a4b);"><span class="dashicons dashicons-dismiss"></span></div>
+                                    <div class="na-warning-text" style="color:#fff;">
+                                        <strong>This note was rejected by a reviewer.</strong>
+                                        ${note.review_note ? `<p style="margin:6px 0 0 0; color:var(--na-danger, #ff2a4b);"><strong>Reviewer Feedback:</strong> "${self.escapeHtml(note.review_note)}"</p>` : ''}
+                                        ${isOwner ? `<p style="margin:6px 0 0 0; font-size:12px; color:var(--na-muted);">You can make corrections and click <em>Edit & Resubmit</em> to send it back to the review queue.</p>` : ''}
                                     </div>
                                 </div>
                             ` : (note.reviewer_name ? `
                                 <div class="na-verified-info" style="margin: 20px 0;">
                                     <span class="dashicons dashicons-yes-alt"></span>
-                                    <span>Verified by <strong>${self.escapeHtml(note.reviewer_name)}</strong> ${note.reviewed_at ? 'on ' + self.formatDate(note.reviewed_at) : ''}</span>
+                                    <span>Verified for <strong>${self.escapeHtml(note.subject || 'General')}</strong> by <strong>${self.escapeHtml(note.reviewer_name)}</strong> ${note.reviewed_at ? 'on ' + self.formatDate(note.reviewed_at) : ''}</span>
                                     ${note.review_note ? `<p class="na-reviewer-note-text">"${self.escapeHtml(note.review_note)}"</p>` : ''}
                                 </div>
-                            ` : '')}
+                            ` : ''))}
 
                             <!-- 4. Tags -->
                             ${tagsHtml ? `<div class="na-card-tags" style="margin-bottom: 24px;">${tagsHtml}</div>` : ''}
@@ -1328,14 +1602,66 @@
                                     </div>
                                     <div class="na-info-row">
                                         <dt>Status</dt>
-                                        <dd>
-                                            ${isVerified ? '<span class="na-status-badge na-status-approved"><span class="dashicons dashicons-yes-alt"></span> Verified</span>' : '<span class="na-status-badge na-status-pending"><span class="dashicons dashicons-warning"></span> Unverified</span>'}
-                                        </dd>
+                                        <dd>${statusSidebarHtml}</dd>
                                     </div>
                                 </dl>
                             </div>
 
-                            <!-- 8. About the Contributor Card -->
+                            <!-- 8. Reviewer & Subject Rating Card -->
+                            ${isVerified && note.reviewed_by ? `
+                                <div class="na-surface-card na-reviewer-card" id="na-detail-reviewer-card" data-expert-id="${note.reviewed_by}" data-subject="${self.escapeHtml(note.subject || '')}">
+                                    <h4 class="na-side-card-title">Reviewer &amp; Rating</h4>
+                                    <div class="na-reviewer-profile-header">
+                                        <div class="na-reviewer-avatar-wrap">
+                                            <span class="dashicons dashicons-awards na-reviewer-icon"></span>
+                                        </div>
+                                        <div class="na-reviewer-meta">
+                                            <div class="na-reviewer-name">${self.escapeHtml(note.reviewer_name || 'Subject Expert')}</div>
+                                            <div class="na-reviewer-subcontext">Reviewed for <strong>${self.escapeHtml(note.subject || 'General')}</strong></div>
+                                        </div>
+                                    </div>
+
+                                    <div class="na-reviewer-stats-block">
+                                        <div class="na-reviewer-primary-rating">
+                                            <div class="na-reviewer-stars-wrap">
+                                                ${self.renderQuarterStarsHtml(rr && rr.has_ratings ? Number(rr.average) : 0, 18)}
+                                            </div>
+                                            <div class="na-reviewer-numeric-score">
+                                                <span class="na-reviewer-score-val">${rr && rr.has_ratings ? rr.formatted_average : '—'}</span>
+                                                <span class="na-reviewer-score-denom">/ 5</span>
+                                            </div>
+                                        </div>
+                                        <div class="na-reviewer-subtext">
+                                            <span class="na-subject-rating-count">${rr && rr.has_ratings ? `${rr.count} rating${rr.count === 1 ? '' : 's'} in ${self.escapeHtml(note.subject || 'this subject')}` : `No ratings yet in ${self.escapeHtml(note.subject || 'this subject')}`}</span>
+                                            ${(rr && rr.reviewed_subject_notes_count > 0) ? `
+                                                <span class="na-reviewer-verified-notes-count">${rr.reviewed_subject_notes_count} note${rr.reviewed_subject_notes_count === 1 ? '' : 's'} verified in this subject</span>
+                                            ` : ''}
+                                        </div>
+                                        ${(rr && rr.has_overall_ratings) ? `
+                                            <div class="na-reviewer-overall-context">
+                                                <span>Overall Expert Rating: <strong>${rr.formatted_overall_average} / 5</strong> (${rr.overall_total} total rating${rr.overall_total === 1 ? '' : 's'})</span>
+                                            </div>
+                                        ` : ''}
+                                    </div>
+
+                                    ${isViewerTheReviewer ? `
+                                        <div class="na-self-rating-notice" style="margin-top:14px;">
+                                            <span class="dashicons dashicons-info"></span>
+                                            <span>You cannot rate yourself.</span>
+                                        </div>
+                                    ` : (NotesAdda.is_logged_in ? `
+                                        <div class="na-reviewer-rate-container" style="margin-top:14px; padding-top:14px; border-top:1px solid rgba(255,255,255,0.08);">
+                                            ${self.renderRatingControlHtml(note.reviewed_by, note.reviewer_name, note.subject, rr ? rr.user_rating : null)}
+                                        </div>
+                                    ` : `
+                                        <div class="na-login-to-rate-notice" style="margin-top:12px; font-size:12px; color:var(--na-muted);">
+                                            Sign in to rate this expert.
+                                        </div>
+                                    `)}
+                                </div>
+                            ` : ''}
+
+                            <!-- 9. About the Contributor Card -->
                             <div class="na-surface-card na-contributor-card">
                                 <h4 class="na-side-card-title">About the Contributor</h4>
                                 <div class="na-contributor-profile">
@@ -1360,6 +1686,7 @@
                             <div class="na-surface-card na-note-actions-card">
                                 <h4 class="na-side-card-title">Actions</h4>
                                 <div class="na-note-actions-stack">
+                                    ${isVerified ? `
                                     <button type="button" class="na-btn na-btn-block na-btn-bookmark ${isBookmarked ? 'bookmarked' : ''}" data-id="${note.id}" title="${isBookmarked ? 'Remove saved note' : 'Save note'}" aria-label="${isBookmarked ? 'Remove saved note' : 'Save note'}">
                                         <svg viewBox="0 0 24 24" class="na-svg-bookmark" width="18" height="18" fill="${isBookmarked ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
                                         <span class="na-btn-text">${isBookmarked ? 'Saved' : 'Save Note'}</span>
@@ -1369,15 +1696,23 @@
                                         <span class="dashicons dashicons-heart"></span>
                                         <span class="na-btn-text">Like (<span class="like-count">${note.like_count || 0}</span>)</span>
                                     </button>
+                                    ` : ''}
 
-                                    ${!isOwner ? `
+                                    ${!isOwner && isVerified ? `
                                         <button type="button" class="na-btn na-btn-ghost na-btn-block na-btn-report" data-id="${note.id}">
                                             <span class="dashicons dashicons-flag"></span>
                                             <span>Report Note</span>
                                         </button>
                                     ` : ''}
 
-                                    ${note.can_edit ? `
+                                    ${isRejected && isOwner ? `
+                                        <button type="button" class="na-btn na-btn-primary na-btn-block na-btn-resubmit-note" data-id="${note.id}">
+                                            <span class="dashicons dashicons-update"></span>
+                                            <span>Edit & Resubmit Note</span>
+                                        </button>
+                                    ` : ''}
+
+                                    ${note.can_edit && !isRejected ? `
                                         <button type="button" class="na-btn na-btn-secondary na-btn-block na-btn-edit" data-id="${note.id}">
                                             <span class="dashicons dashicons-edit"></span>
                                             <span>Edit Note</span>
@@ -1393,16 +1728,23 @@
 
                                     ${note.can_review ? `
                                         <div class="na-review-action-divider" style="margin-top:12px; padding-top:12px; border-top:1px solid var(--na-line);">
-                                            <div style="font-size:12px; font-weight:700; color:var(--na-muted); margin-bottom:8px; text-transform:uppercase;">Staff Review</div>
-                                            ${!isVerified ? `
-                                                <button type="button" class="na-btn na-btn-primary na-btn-block na-btn-verify" data-id="${note.id}">
-                                                    <span class="dashicons dashicons-yes-alt"></span> Mark Verified
+                                            <div style="font-size:12px; font-weight:700; color:var(--na-muted); margin-bottom:8px; text-transform:uppercase;">Staff Moderation</div>
+                                            ${isPending ? `
+                                                <button type="button" class="na-btn na-btn-primary na-btn-block na-btn-review-action" data-action="verify" data-id="${note.id}" data-title="${self.escapeHtml(note.title)}">
+                                                    <span class="dashicons dashicons-yes-alt"></span> Approve & Verify
+                                                </button>
+                                                <button type="button" class="na-btn na-btn-danger na-btn-block na-btn-review-action" data-action="reject" data-id="${note.id}" data-title="${self.escapeHtml(note.title)}" style="margin-top:8px;">
+                                                    <span class="dashicons dashicons-dismiss"></span> Reject Note
+                                                </button>
+                                            ` : (isVerified ? `
+                                                <button type="button" class="na-btn na-btn-secondary na-btn-block na-btn-review-action" data-action="reject" data-id="${note.id}" data-title="${self.escapeHtml(note.title)}">
+                                                    <span class="dashicons dashicons-dismiss"></span> Change to Rejected
                                                 </button>
                                             ` : `
-                                                <button type="button" class="na-btn na-btn-secondary na-btn-block na-btn-unverify" data-id="${note.id}">
-                                                    <span class="dashicons dashicons-warning"></span> Mark Unverified
+                                                <button type="button" class="na-btn na-btn-primary na-btn-block na-btn-review-action" data-action="verify" data-id="${note.id}" data-title="${self.escapeHtml(note.title)}">
+                                                    <span class="dashicons dashicons-yes-alt"></span> Approve Note
                                                 </button>
-                                            `}
+                                            `)}
                                         </div>
                                     ` : ''}
                                 </div>
@@ -1421,7 +1763,10 @@
             $body.html('<div class="na-state-box"><span class="dashicons dashicons-update na-spin na-state-icon"></span><p class="na-state-title">Loading note details...</p></div>');
             $('#na-note-details-modal').addClass('open');
 
-            const isVerified = (note.review_status === 'verified');
+            const status = note.review_status || 'pending';
+            const isVerified = (status === 'verified');
+            const isPending = (status === 'pending');
+            const isRejected = (status === 'rejected');
             const isBookmarked = !!note.is_bookmarked;
 
             $.get(NotesAdda.ajax_url, {
@@ -1435,21 +1780,22 @@
                     }).join('') + '</div>';
                 }
 
+                let modalBadgeHtml = '';
+                if (isVerified) {
+                    modalBadgeHtml = '<span class="na-badge na-badge-verified"><span class="dashicons dashicons-yes-alt"></span> Expert Verified</span>';
+                } else if (isRejected) {
+                    modalBadgeHtml = '<span class="na-badge na-badge-rejected"><span class="dashicons dashicons-dismiss"></span> Rejected</span>';
+                } else {
+                    modalBadgeHtml = '<span class="na-badge na-badge-pending"><span class="dashicons dashicons-clock"></span> Pending Review</span>';
+                }
+
                 const html = `
                     <div class="na-preview-header">
                         <div class="na-badge-group" style="margin-bottom:10px;">
                             <span class="na-badge na-badge-subject">${self.escapeHtml(note.subject || 'General')}</span>
                             ${note.chapter ? `<span class="na-badge na-badge-chapter">${self.escapeHtml(note.chapter)}</span>` : ''}
                             ${parseInt(note.is_whole_notes) === 1 ? `<span class="na-badge na-badge-whole">Full Course</span>` : ''}
-                            ${isVerified ? `
-                                <span class="na-badge na-badge-verified">
-                                    <span class="dashicons dashicons-yes-alt"></span> Expert Verified
-                                </span>
-                            ` : `
-                                <span class="na-badge na-badge-unverified">
-                                    <span class="dashicons dashicons-warning"></span> Unverified
-                                </span>
-                            `}
+                            ${modalBadgeHtml}
                         </div>
                         <h2 class="na-preview-title">${self.escapeHtml(note.title)}</h2>
                         <div class="na-card-date" style="margin-top:6px;">
@@ -1459,35 +1805,52 @@
                         </div>
                     </div>
 
-                    ${!isVerified ? `
+                    ${isPending ? `
                         <div class="na-unverified-warning">
-                            <div class="na-warning-icon"><span class="dashicons dashicons-warning"></span></div>
+                            <div class="na-warning-icon"><span class="dashicons dashicons-clock"></span></div>
                             <div class="na-warning-text">
-                                This community note has not been verified by an expert. Please check the material independently before relying on it.
+                                This note is awaiting expert verification and is not visible to the public.
+                            </div>
+                        </div>
+                    ` : (isRejected ? `
+                        <div class="na-unverified-warning" style="border-color:rgba(255,42,75,0.4); background:rgba(255,42,75,0.08);">
+                            <div class="na-warning-icon" style="color:var(--na-danger, #ff2a4b);"><span class="dashicons dashicons-dismiss"></span></div>
+                            <div class="na-warning-text">
+                                <strong>Submission Rejected.</strong>
+                                ${note.review_note ? `<p style="margin:4px 0 0 0; color:var(--na-danger, #ff2a4b);">"${self.escapeHtml(note.review_note)}"</p>` : ''}
                             </div>
                         </div>
                     ` : (note.reviewer_name ? `
                         <div class="na-verified-info">
                             <span class="dashicons dashicons-yes-alt"></span>
-                            <span>Verified by <strong>${self.escapeHtml(note.reviewer_name)}</strong> ${note.reviewed_at ? 'on ' + self.formatDate(note.reviewed_at) : ''}</span>
+                            <span>Verified for <strong>${self.escapeHtml(note.subject || 'General')}</strong> by <strong>${self.escapeHtml(note.reviewer_name)}</strong> ${note.reviewed_at ? 'on ' + self.formatDate(note.reviewed_at) : ''}</span>
+                            ${note.reviewer_rating && note.reviewer_rating.has_ratings ? `
+                                <div style="margin-top:6px; display:flex; align-items:center; gap:6px;">
+                                    ${self.renderQuarterStarsHtml(Number(note.reviewer_rating.average), 16)}
+                                    <strong style="color:#ffb703; font-size:12px;">${note.reviewer_rating.formatted_average} / 5</strong>
+                                    <span style="color:var(--na-muted); font-size:11px;">(${note.reviewer_rating.count} rating${note.reviewer_rating.count === 1 ? '' : 's'})</span>
+                                </div>
+                            ` : ''}
                             ${note.review_note ? `<p class="na-reviewer-note-text">"${self.escapeHtml(note.review_note)}"</p>` : ''}
                         </div>
-                    ` : '')}
+                    ` : ''))}
 
                     ${tagsHtml}
                     <div class="na-preview-desc">${self.escapeHtml(note.description || 'No additional description provided.')}</div>
-                    
+
                     <div class="na-preview-actions">
                         ${note.file_url ? `
                         <a href="${self.escapeHtml(note.file_url)}" target="_blank" rel="noopener noreferrer" class="na-btn na-btn-primary">
                             <span class="dashicons dashicons-pdf"></span>
                             <span>Open & Download PDF</span>
                         </a>` : '<p style="color:var(--na-muted);">No document attached.</p>'}
-                        
+
+                        ${isVerified ? `
                         <button type="button" class="na-btn na-btn-secondary na-btn-bookmark ${isBookmarked ? 'bookmarked' : ''}" id="na-modal-bookmark-btn" data-id="${note.id}" title="${isBookmarked ? 'Remove saved note' : 'Save note'}" aria-label="${isBookmarked ? 'Remove saved note' : 'Save note'}">
                             <svg viewBox="0 0 24 24" class="na-svg-bookmark" width="18" height="18" fill="${isBookmarked ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
                             <span class="na-btn-text">${isBookmarked ? 'Saved' : 'Save Note'}</span>
                         </button>
+                        ` : ''}
                     </div>
                 `;
 
@@ -1553,51 +1916,76 @@
             const self = this;
 
             notes.forEach(function(note) {
-                const isVerified = (note.review_status === 'verified');
+                const status = note.review_status || 'pending';
+                const isVerified = (status === 'verified');
+                const isRejected = (status === 'rejected');
+                const isPending = (status === 'pending');
+                const isOwner = (parseInt(note.owner_id) === parseInt(NotesAdda.user_id));
+
+                let statusBadge = '';
+                if (isVerified) {
+                    statusBadge = '<span class="na-badge na-badge-verified"><span class="dashicons dashicons-yes-alt"></span> Verified</span>';
+                } else if (isRejected) {
+                    statusBadge = '<span class="na-badge na-badge-rejected"><span class="dashicons dashicons-dismiss"></span> Rejected</span>';
+                } else {
+                    statusBadge = '<span class="na-badge na-badge-pending"><span class="dashicons dashicons-clock"></span> Pending</span>';
+                }
 
                 const html = `
-                    <div class="na-review-card ${isVerified ? 'verified-card' : 'unverified-card'}" data-id="${note.id}">
+                    <div class="na-review-card ${isVerified ? 'verified-card' : (isRejected ? 'rejected-card' : 'pending-card')}" data-id="${note.id}">
                         <div class="na-review-card-main">
                             <div class="na-badge-group">
                                 <span class="na-badge na-badge-subject">${self.escapeHtml(note.subject || 'General')}</span>
                                 ${note.chapter ? `<span class="na-badge na-badge-chapter">${self.escapeHtml(note.chapter)}</span>` : ''}
-                                ${isVerified ? `
-                                    <span class="na-badge na-badge-verified"><span class="dashicons dashicons-yes-alt"></span> Verified</span>
-                                ` : `
-                                    <span class="na-badge na-badge-unverified"><span class="dashicons dashicons-warning"></span> Unverified</span>
-                                `}
+                                ${statusBadge}
+                                ${isOwner ? '<span class="na-badge na-badge-warning" title="You cannot review your own upload"><span class="dashicons dashicons-lock"></span> Self-review restricted</span>' : ''}
                             </div>
                             <h3 class="na-review-card-title">${self.escapeHtml(note.title)}</h3>
                             <p class="na-review-card-desc">${self.escapeHtml(note.description || 'No description provided.')}</p>
-                            
+
+                            ${note.review_note ? `
+                                <div class="na-review-feedback-box" style="margin:10px 0; padding:10px 12px; background:rgba(255,255,255,0.03); border-left:3px solid ${isVerified ? 'var(--na-brand, #00ff66)' : (isRejected ? 'var(--na-danger, #ff2a4b)' : 'var(--na-warning, #ffaa00)')}; border-radius:4px; font-size:13px;">
+                                    <strong>${isVerified ? 'Verification note' : (isRejected ? 'Rejection reason' : 'Reviewer reason')}:</strong> ${self.escapeHtml(note.review_note)}
+                                </div>
+                            ` : ''}
+
                             <div class="na-review-card-meta">
                                 <span>Uploaded by: <strong>${self.escapeHtml(note.uploader_name || 'Student')}</strong></span>
                                 <span>•</span>
-                                <span>${self.formatDate(note.created_at)}</span>
-                                ${note.reviewer_name ? `<span>•</span> <span>Reviewed by: <strong>${self.escapeHtml(note.reviewer_name)}</strong></span>` : ''}
+                                <span>Submitted: ${self.formatDate(note.created_at)}</span>
+                                ${note.reviewer_name ? `<span>•</span> <span>Reviewed by: <strong>${self.escapeHtml(note.reviewer_name)}</strong> (${self.formatDate(note.reviewed_at)})</span>` : ''}
                             </div>
                         </div>
 
                         <div class="na-review-card-actions">
-                            <button type="button" class="na-btn na-btn-secondary na-btn-sm na-btn-view" title="Preview note details">
+                            <button type="button" class="na-btn na-btn-secondary na-btn-sm na-btn-view" data-id="${note.id}" title="Preview note details">
                                 <span class="dashicons dashicons-visibility"></span> Preview
                             </button>
                             ${note.file_url ? `
                             <a href="${self.escapeHtml(note.file_url)}" target="_blank" rel="noopener noreferrer" class="na-btn na-btn-secondary na-btn-sm" title="Open PDF">
                                 <span class="dashicons dashicons-pdf"></span> Open PDF
                             </a>` : ''}
-                            
-                            ${isVerified ? `
-                                <button type="button" class="na-btn na-btn-ghost na-btn-sm na-btn-unverify">
-                                    <span class="dashicons dashicons-dismiss"></span> Mark Unverified
-                                </button>
-                            ` : `
-                                <button type="button" class="na-btn na-btn-primary na-btn-sm na-btn-verify">
-                                    <span class="dashicons dashicons-yes-alt"></span> Verify Note
-                                </button>
-                            `}
 
-                            <button type="button" class="na-btn na-btn-danger na-btn-sm na-btn-delete" title="Delete Note">
+                            ${!isOwner ? `
+                                ${isPending ? `
+                                    <button type="button" class="na-btn na-btn-primary na-btn-sm na-btn-review-action" data-action="verify" data-id="${note.id}" data-title="${self.escapeHtml(note.title)}">
+                                        <span class="dashicons dashicons-yes-alt"></span> Approve
+                                    </button>
+                                    <button type="button" class="na-btn na-btn-danger na-btn-sm na-btn-review-action" data-action="reject" data-id="${note.id}" data-title="${self.escapeHtml(note.title)}">
+                                        <span class="dashicons dashicons-dismiss"></span> Reject
+                                    </button>
+                                ` : (isVerified ? `
+                                    <button type="button" class="na-btn na-btn-danger na-btn-sm na-btn-review-action" data-action="reject" data-id="${note.id}" data-title="${self.escapeHtml(note.title)}">
+                                        <span class="dashicons dashicons-dismiss"></span> Reject
+                                    </button>
+                                ` : `
+                                    <button type="button" class="na-btn na-btn-primary na-btn-sm na-btn-review-action" data-action="verify" data-id="${note.id}" data-title="${self.escapeHtml(note.title)}">
+                                        <span class="dashicons dashicons-yes-alt"></span> Approve
+                                    </button>
+                                `)}
+                            ` : ''}
+
+                            <button type="button" class="na-btn na-btn-danger na-btn-sm na-btn-delete" data-id="${note.id}" title="Delete Note">
                                 <span class="dashicons dashicons-trash"></span> Delete
                             </button>
                         </div>
@@ -1610,35 +1998,330 @@
             });
         },
 
-        submitReview: function(noteId, status, $btn) {
-            const self = this;
-            $btn.prop('disabled', true).css('opacity', '0.6');
+        openReviewModal: function(noteId, actionType, noteTitle) {
+            $('#na-review-note-id').val(noteId);
+            $('#na-review-action-type').val(actionType);
+            $('#na-review-target-title').text(noteTitle || ('Note #' + noteId));
+            $('#na-review-reason').val('');
+            $('#na-review-modal-msg').text('').removeClass('error success');
 
-            let reviewNote = '';
-            if (status === 'verified') {
-                const notePrompt = prompt('Optional reviewer note (leave empty if none):');
-                if (notePrompt !== null) {
-                    reviewNote = notePrompt.trim();
-                }
+            const isApprove = (actionType === 'verify');
+            if (isApprove) {
+                $('#na-review-modal-title').text('Approve Note Submission');
+                $('#na-review-action-badge')
+                    .attr('class', 'na-badge na-badge-verified')
+                    .html('<span class="dashicons dashicons-yes-alt"></span> Approve & Verify');
+                $('#na-submit-review-btn')
+                    .attr('class', 'na-btn na-btn-primary')
+                    .prop('disabled', false);
+                $('#na-submit-review-text').text('Approve & Publish');
+            } else {
+                $('#na-review-modal-title').text('Reject Note Submission');
+                $('#na-review-action-badge')
+                    .attr('class', 'na-badge na-badge-rejected')
+                    .html('<span class="dashicons dashicons-dismiss"></span> Reject');
+                $('#na-submit-review-btn')
+                    .attr('class', 'na-btn na-btn-danger')
+                    .prop('disabled', false);
+                $('#na-submit-review-text').text('Reject Submission');
             }
+
+            $('#na-submit-review-btn .na-btn-spinner').hide();
+            $('#na-review-modal').addClass('open');
+            $('#na-review-reason').focus();
+        },
+
+        submitReviewModal: function() {
+            const self = this;
+            const noteId = $('#na-review-note-id').val();
+            const actionType = $('#na-review-action-type').val();
+            const reason = $('#na-review-reason').val().trim();
+            const $msg = $('#na-review-modal-msg');
+            const $btn = $('#na-submit-review-btn');
+
+            $msg.text('').removeClass('error success');
+
+            if (!reason) {
+                $msg.text('A review reason is required explaining why this note was accepted or rejected.').addClass('error');
+                $('#na-review-reason').focus();
+                return;
+            }
+
+            $btn.prop('disabled', true);
+            $btn.find('.na-btn-spinner').show();
+
+            const status = (actionType === 'verify') ? 'verified' : 'rejected';
 
             $.post(NotesAdda.ajax_url, {
                 action: 'notes_adda_review_note',
                 note_id: noteId,
                 status: status,
-                review_note: reviewNote,
+                review_note: reason,
+                _ajax_nonce: NotesAdda.nonce
+            }, function(res) {
+                $btn.prop('disabled', false);
+                $btn.find('.na-btn-spinner').hide();
+                if (res.success) {
+                    $('#na-review-modal').removeClass('open');
+                    const successMsg = status === 'verified'
+                        ? 'Note successfully verified and published!'
+                        : 'Note rejected. Reason has been sent to the contributor.';
+                    self.showToast(successMsg, 'success');
+                    self.loadPendingReviewCount();
+                    if (self.activeView === 'review-queue') {
+                        self.loadReviewQueue();
+                    } else if (self.activeView === 'note-details') {
+                        self.openNoteDetailsPage(parseInt(noteId), false);
+                    }
+                } else {
+                    const err = (res.data && res.data.message) ? res.data.message : 'Could not submit review.';
+                    $msg.text(err).addClass('error');
+                }
+            }).fail(function(xhr) {
+                $btn.prop('disabled', false);
+                $btn.find('.na-btn-spinner').hide();
+                const err = (xhr.responseJSON && xhr.responseJSON.data && xhr.responseJSON.data.message)
+                    ? xhr.responseJSON.data.message
+                    : 'Failed to submit review.';
+                $msg.text(err).addClass('error');
+            });
+        },
+
+        /* ==================================================
+           NOTIFICATIONS
+           ================================================== */
+        loadNotifications: function() {
+            const self = this;
+            if (!NotesAdda.is_logged_in) return;
+
+            $.get(NotesAdda.ajax_url, {
+                action: 'notes_adda_get_notifications',
+                _ajax_nonce: NotesAdda.nonce
+            }, function(res) {
+                if (res.success && res.data) {
+                    self.renderNotifications(res.data.items || [], res.data.unread_count || 0);
+                }
+            });
+        },
+
+        renderNotifications: function(items, unreadCount) {
+            const self = this;
+            const $badges = $('.na-notifications-count-badge');
+            if (unreadCount > 0) {
+                $badges.text(unreadCount > 99 ? '99+' : unreadCount)
+                    .attr('aria-label', `${unreadCount} unread notifications`)
+                    .show();
+            } else {
+                $badges.text('0').attr('aria-label', '0 unread notifications').hide();
+            }
+
+            const $lists = $('.na-notifications-items');
+            const $empties = $('.na-notifications-empty');
+
+            if (!items || items.length === 0) {
+                $lists.empty();
+                $empties.show();
+                return;
+            }
+
+            $empties.hide();
+            let html = '';
+            items.forEach(function(item) {
+                const isUnread = parseInt(item.is_read) === 0;
+                const isVerified = (item.type === 'note_verified');
+                const isRejected = (item.type === 'note_rejected');
+                const badgeClass = isVerified ? 'na-notif-verified' : (isRejected ? 'na-notif-rejected' : 'na-notif-general');
+                const icon = isVerified ? 'dashicons-yes-alt' : (isRejected ? 'dashicons-dismiss' : 'dashicons-bell');
+
+                html += `
+                    <div class="na-notification-item ${isUnread ? 'unread' : 'read'}" data-id="${item.id}" data-note-id="${item.note_id || ''}" role="button" tabindex="0">
+                        <div class="na-notif-icon-wrap ${badgeClass}">
+                            <span class="dashicons ${icon}"></span>
+                        </div>
+                        <div class="na-notif-content">
+                            <div class="na-notif-title-row">
+                                <span class="na-notif-title">${self.escapeHtml(item.title)}</span>
+                                ${isUnread ? '<span class="na-notif-unread-dot" title="Unread"></span>' : ''}
+                            </div>
+                            <p class="na-notif-msg">${self.escapeHtml(item.message)}</p>
+                            <div class="na-notif-meta">
+                                <span class="na-notif-time">${self.formatDate(item.created_at)}</span>
+                                ${isUnread ? `
+                                    <button type="button" class="na-notif-mark-read-btn" data-id="${item.id}" title="Mark as read">
+                                        Mark read
+                                    </button>
+                                ` : ''}
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+
+            $lists.html(html);
+        },
+
+        markNotificationRead: function(id) {
+            $.post(NotesAdda.ajax_url, {
+                action: 'notes_adda_mark_notification_read',
+                id: id,
                 _ajax_nonce: NotesAdda.nonce
             }, function(res) {
                 if (res.success) {
-                    self.loadReviewQueue();
+                    $(`.na-notification-item[data-id="${id}"]`).removeClass('unread').addClass('read').find('.na-notif-unread-dot, .na-notif-mark-read-btn').remove();
+                    const unread = res.data && typeof res.data.unread_count !== 'undefined' ? res.data.unread_count : 0;
+                    const $badges = $('.na-notifications-count-badge');
+                    if (unread > 0) {
+                        $badges.text(unread > 99 ? '99+' : unread).show();
+                    } else {
+                        $badges.text('0').hide();
+                    }
+                }
+            });
+        },
+
+        markAllNotificationsRead: function() {
+            const self = this;
+            $.post(NotesAdda.ajax_url, {
+                action: 'notes_adda_mark_all_notifications_read',
+                _ajax_nonce: NotesAdda.nonce
+            }, function(res) {
+                if (res.success) {
+                    $('.na-notification-item').removeClass('unread').addClass('read').find('.na-notif-unread-dot, .na-notif-mark-read-btn').remove();
+                    $('.na-notifications-count-badge').text('0').hide();
+                    self.showToast('All notifications marked as read', 'success');
+                }
+            });
+        },
+
+        /* ==================================================
+           RED DOT / PENDING REVIEW COUNT
+           ================================================== */
+        loadPendingReviewCount: function() {
+            if (!NotesAdda.can_review) return;
+
+            $.get(NotesAdda.ajax_url, {
+                action: 'notes_adda_get_pending_review_count',
+                _ajax_nonce: NotesAdda.nonce
+            }, function(res) {
+                if (res.success && typeof res.data.count !== 'undefined') {
+                    const count = parseInt(res.data.count) || 0;
+                    const $badge = $('#na-pending-reviews-badge');
+                    if (count > 0) {
+                        $badge.text(count > 99 ? '99+' : count)
+                            .attr('aria-label', `${count} notes awaiting verification`)
+                            .css('display', 'inline-flex');
+                    } else {
+                        $badge.text('0').attr('aria-label', '0 notes awaiting verification').hide();
+                    }
+                }
+            });
+        },
+
+        /* ==================================================
+           EXPERT RATINGS
+           ================================================== */
+        submitExpertRating: function(expertId, subject, rating, $container) {
+            const self = this;
+            const $btn = $container.find('.na-submit-rating-btn');
+            const $slider = $container.find('.na-rating-slider');
+            const $presets = $container.find('.na-preset-btn');
+            const $btns = $container.find('.na-star-btn');
+            const $spinner = $btn.find('.na-btn-spinner');
+            const $btnText = $btn.find('.na-btn-text');
+
+            $btn.prop('disabled', true);
+            $slider.prop('disabled', true);
+            $presets.prop('disabled', true);
+            $btns.prop('disabled', true);
+            $spinner.show();
+
+            $.post(NotesAdda.ajax_url, {
+                action: 'notes_adda_rate_expert',
+                expert_id: expertId,
+                subject: subject,
+                rating: rating,
+                _ajax_nonce: NotesAdda.nonce
+            }, function(res) {
+                $btn.prop('disabled', false);
+                $slider.prop('disabled', false);
+                $presets.prop('disabled', false);
+                $btns.prop('disabled', false);
+                $spinner.hide();
+
+                if (res.success && res.data) {
+                    const data = res.data;
+                    const avgVal = parseFloat(data.average) || 0;
+                    const avgFormatted = data.formatted_average || Number(avgVal).toFixed(2);
+                    const userRatingFormatted = data.formatted_rating || Number(rating).toFixed(2);
+                    const count = parseInt(data.count) || 0;
+
+                    // Update widget internal state
+                    $container.data('current-user-rating', rating);
+                    $btnText.text(`Update Rating to ${userRatingFormatted}`);
+
+                    let $ratedNotice = $container.find('.na-current-rated-notice');
+                    if (!$ratedNotice.length) {
+                        $container.find('.na-rating-action-row').append('<span class="na-current-rated-notice"></span>');
+                        $ratedNotice = $container.find('.na-current-rated-notice');
+                    }
+                    $ratedNotice.html(`You previously rated: <strong>${userRatingFormatted}/5</strong>`);
+
+                    // Update Detail Page Reviewer Card if visible
+                    const $reviewerCard = $('#na-detail-reviewer-card');
+                    if ($reviewerCard.length && parseInt($reviewerCard.data('expert-id')) === expertId) {
+                        $reviewerCard.find('.na-reviewer-stars-wrap').html(self.renderQuarterStarsHtml(avgVal, 18));
+                        $reviewerCard.find('.na-reviewer-score-val').text(avgFormatted);
+                        $reviewerCard.find('.na-subject-rating-count').text(`${count} rating${count === 1 ? '' : 's'} in ${subject}`);
+                        if (data.has_overall_ratings) {
+                            let $overallContext = $reviewerCard.find('.na-reviewer-overall-context');
+                            if (!$overallContext.length) {
+                                $reviewerCard.find('.na-reviewer-stats-block').append('<div class="na-reviewer-overall-context"></div>');
+                                $overallContext = $reviewerCard.find('.na-reviewer-overall-context');
+                            }
+                            $overallContext.html(
+                                `<span>Overall Expert Rating: <strong>${data.formatted_overall_average} / 5</strong> (${data.overall_total} total rating${data.overall_total === 1 ? '' : 's'})</span>`
+                            );
+                        }
+                    }
+
+                    // Immediately update every rendered note card on the page matching (expert, subject)
+                    $(`.na-card[data-reviewer-id="${expertId}"][data-subject="${subject}"]`).each(function() {
+                        const $card = $(this);
+                        const $revBox = $card.find('.na-card-reviewer-box');
+                        if ($revBox.length) {
+                            $revBox.find('.na-card-rating-line').html(`
+                                ${self.renderQuarterStarsHtml(avgVal, 14)}
+                                <span class="na-card-rating-score">${avgFormatted} / 5</span>
+                                <span class="na-card-rating-count">(${count} rating${count === 1 ? '' : 's'})</span>
+                            `);
+                            const diff = Math.abs(avgVal - (parseFloat(data.overall_average) || 0));
+                            if (data.has_overall_ratings && diff >= 0.25) {
+                                let $ovLine = $revBox.find('.na-card-overall-line');
+                                if (!$ovLine.length) {
+                                    $revBox.append('<div class="na-card-overall-line"></div>');
+                                    $ovLine = $revBox.find('.na-card-overall-line');
+                                }
+                                $ovLine.html(`<span class="na-card-overall-text">Overall: ${data.formatted_overall_average} / 5 (${data.overall_total} total)</span>`);
+                            }
+                        }
+                    });
+
+                    self.showToast(data.message || 'Rating submitted!', 'success');
                 } else {
-                    $btn.prop('disabled', false).css('opacity', '1');
-                    alert('Error: ' + (res.data ? res.data.message : 'Could not update review status.'));
+                    const msg = (res.data && res.data.message) ? res.data.message : 'Failed to submit rating.';
+                    self.showToast(msg, 'error');
                 }
             }).fail(function(xhr) {
-                $btn.prop('disabled', false).css('opacity', '1');
-                const err = xhr.responseJSON && xhr.responseJSON.data ? xhr.responseJSON.data.message : 'Failed to submit review.';
-                alert(err);
+                $btn.prop('disabled', false);
+                $slider.prop('disabled', false);
+                $presets.prop('disabled', false);
+                $btns.prop('disabled', false);
+                $spinner.hide();
+
+                const msg = (xhr.responseJSON && xhr.responseJSON.data && xhr.responseJSON.data.message)
+                    ? xhr.responseJSON.data.message
+                    : 'Error submitting rating.';
+                self.showToast(msg, 'error');
             });
         },
 
@@ -2349,15 +3032,26 @@
             });
         },
 
-        showToast: function(msg) {
+        showToast: function(msg, type) {
             let $toast = $('#na-toast');
             if (!$toast.length) {
                 $toast = $('<div id="na-toast" class="na-toast"></div>').appendTo('body');
             }
-            $toast.text(msg).addClass('show');
-            setTimeout(function() {
+            const typeClass = type || 'info';
+            let icon = 'info';
+            if (typeClass === 'success') icon = 'yes-alt';
+            else if (typeClass === 'error') icon = 'dismiss';
+            else if (typeClass === 'warning') icon = 'warning';
+
+            $toast
+                .attr('class', 'na-toast na-toast-' + typeClass)
+                .html(`<span class="dashicons dashicons-${icon}"></span> <span>${this.escapeHtml(msg)}</span>`)
+                .addClass('show');
+
+            clearTimeout(this._toastTimeout);
+            this._toastTimeout = setTimeout(function() {
                 $toast.removeClass('show');
-            }, 3000);
+            }, 3500);
         },
 
         formatDate: function(dateStr) {
@@ -2380,6 +3074,84 @@
                 "'": '&#039;'
             };
             return String(text).replace(/[&<>"']/g, function(m) { return map[m]; });
+        },
+
+        renderQuarterStarsHtml: function(rating, size) {
+            rating = parseFloat(rating) || 0;
+            size = size || 16;
+            rating = Math.round(rating * 4) / 4;
+            rating = Math.max(0, Math.min(5, rating));
+
+            let starsHtml = '';
+            for (let i = 1; i <= 5; i++) {
+                const diff = Math.max(0, Math.min(1, rating - (i - 1)));
+                let grad = 0;
+                if (diff >= 0.875) {
+                    grad = 100;
+                } else if (diff >= 0.625) {
+                    grad = 75;
+                } else if (diff >= 0.375) {
+                    grad = 50;
+                } else if (diff >= 0.125) {
+                    grad = 25;
+                } else {
+                    grad = 0;
+                }
+                starsHtml += `
+                    <svg class="na-star-svg" viewBox="0 0 24 24" width="${size}" height="${size}" aria-hidden="true">
+                        <path fill="url(#na-star-grad-${grad})" d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+                    </svg>
+                `;
+            }
+            const label = `${rating.toFixed(2)} out of 5 stars`;
+            return `<span class="na-quarter-stars" role="img" aria-label="${label}" title="${label}">${starsHtml}</span>`;
+        },
+
+        renderRatingControlHtml: function(expertId, expertName, subject, userRating) {
+            const self = this;
+            const currentVal = (userRating !== null && userRating !== undefined && userRating > 0) ? parseFloat(userRating) : 5.00;
+            const formattedVal = Number(currentVal).toFixed(2);
+            const hasRated = (userRating !== null && userRating !== undefined && userRating > 0);
+            const expertDisplay = expertName || 'Expert';
+
+            return `
+                <div class="na-contextual-rating-widget" data-expert-id="${expertId}" data-subject="${self.escapeHtml(subject || '')}" data-current-user-rating="${hasRated ? currentVal : ''}">
+                    <div class="na-rating-ctrl-header">
+                        <label for="na-rating-slider-${expertId}" class="na-rating-ctrl-label">
+                            Rate <strong>${self.escapeHtml(expertDisplay)}</strong> for <em>${self.escapeHtml(subject || 'this subject')}</em>:
+                        </label>
+                        <div class="na-rating-val-badge">
+                            <span class="na-rating-val-number">${formattedVal}</span> / 5.00
+                        </div>
+                    </div>
+
+                    <div class="na-rating-slider-row">
+                        <input type="range" id="na-rating-slider-${expertId}" class="na-rating-slider" min="0.25" max="5.00" step="0.25" value="${formattedVal}" aria-label="Rate ${self.escapeHtml(expertDisplay)} ${formattedVal} out of 5 stars">
+                    </div>
+
+                    <div class="na-rating-stars-live-preview">
+                        ${self.renderQuarterStarsHtml(currentVal, 22)}
+                    </div>
+
+                    <div class="na-rating-presets-row">
+                        <span class="na-preset-label">Quick select:</span>
+                        <button type="button" class="na-preset-btn" data-val="5.00">5.00</button>
+                        <button type="button" class="na-preset-btn" data-val="4.75">4.75</button>
+                        <button type="button" class="na-preset-btn" data-val="4.50">4.50</button>
+                        <button type="button" class="na-preset-btn" data-val="4.25">4.25</button>
+                        <button type="button" class="na-preset-btn" data-val="4.00">4.00</button>
+                    </div>
+
+                    <div class="na-rating-action-row">
+                        <button type="button" class="na-btn na-btn-sm na-btn-primary na-submit-rating-btn" style="width:100%; justify-content:center;">
+                            <span class="dashicons dashicons-star-filled"></span>
+                            <span class="na-btn-text">${hasRated ? `Update Rating to ${formattedVal}` : `Submit Rating of ${formattedVal}`}</span>
+                            <span class="na-btn-spinner dashicons dashicons-update na-spin" style="display:none;"></span>
+                        </button>
+                        ${hasRated ? `<span class="na-current-rated-notice">You previously rated: <strong>${formattedVal}/5</strong></span>` : ''}
+                    </div>
+                </div>
+            `;
         }
     };
 

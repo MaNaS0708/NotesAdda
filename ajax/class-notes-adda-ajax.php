@@ -23,6 +23,17 @@ class Notes_Adda_Ajax {
 
 		// Note Review Workflow (Expert/Admin only)
 		add_action( 'wp_ajax_notes_adda_review_note', array( __CLASS__, 'review_note' ) );
+		add_action( 'wp_ajax_notes_adda_get_pending_review_count', array( __CLASS__, 'get_pending_review_count' ) );
+
+		// Notifications (Logged-in only)
+		add_action( 'wp_ajax_notes_adda_get_notifications', array( __CLASS__, 'get_notifications' ) );
+		add_action( 'wp_ajax_notes_adda_mark_notification_read', array( __CLASS__, 'mark_notification_read' ) );
+		add_action( 'wp_ajax_notes_adda_mark_all_notifications_read', array( __CLASS__, 'mark_all_notifications_read' ) );
+
+		// Expert Ratings
+		add_action( 'wp_ajax_notes_adda_rate_expert', array( __CLASS__, 'rate_expert' ) );
+		add_action( 'wp_ajax_notes_adda_get_expert_rating', array( __CLASS__, 'get_expert_rating' ) );
+		add_action( 'wp_ajax_nopriv_notes_adda_get_expert_rating', array( __CLASS__, 'get_expert_rating' ) );
 
 		// Subjects
 		add_action( 'wp_ajax_notes_adda_get_subjects', array( __CLASS__, 'get_subjects' ) );
@@ -249,7 +260,7 @@ class Notes_Adda_Ajax {
 	}
 
 	/**
-	 * Review note handler (Verify or Mark Unverified).
+	 * Review note handler (Verify or Reject).
 	 */
 	public static function review_note() {
 		$user_id = self::check_auth();
@@ -258,16 +269,20 @@ class Notes_Adda_Ajax {
 			self::send_error( new WP_Error( 'notes_adda_forbidden', 'You do not have permission to review notes.' ) );
 		}
 
-		$note_id = isset( $_POST['note_id'] ) ? (int) $_POST['note_id'] : 0;
-		$status  = isset( $_POST['status'] ) ? sanitize_key( wp_unslash( $_POST['status'] ) ) : '';
+		$note_id     = isset( $_POST['note_id'] ) ? (int) $_POST['note_id'] : 0;
+		$status      = isset( $_POST['status'] ) ? sanitize_key( wp_unslash( $_POST['status'] ) ) : '';
 		$review_note = isset( $_POST['review_note'] ) ? sanitize_textarea_field( wp_unslash( $_POST['review_note'] ) ) : '';
 
 		if ( $note_id <= 0 ) {
 			self::send_error( new WP_Error( 'notes_adda_invalid_note_id', 'Please provide a valid note ID.' ) );
 		}
 
-		if ( ! in_array( $status, array( 'verified', 'unverified' ), true ) ) {
-			self::send_error( new WP_Error( 'notes_adda_invalid_status', 'Status must be verified or unverified.' ) );
+		if ( ! in_array( $status, array( 'verified', 'rejected' ), true ) ) {
+			self::send_error( new WP_Error( 'notes_adda_invalid_status', 'Review status must be either "verified" or "rejected".' ) );
+		}
+
+		if ( empty( trim( $review_note ) ) ) {
+			self::send_error( new WP_Error( 'notes_adda_missing_review_reason', 'A review reason is required for both approval and rejection.' ) );
 		}
 
 		$result = Notes_Adda_Notes::review( $note_id, $user_id, $status, $review_note );
@@ -837,6 +852,127 @@ class Notes_Adda_Ajax {
 			self::send_error( $result );
 		}
 
+		wp_send_json_success( $result );
+	}
+
+	/**
+	 * Get notifications for current user.
+	 */
+	public static function get_notifications() {
+		$user_id = self::check_auth();
+
+		$page        = isset( $_REQUEST['page'] ) ? (int) $_REQUEST['page'] : 1;
+		$per_page    = isset( $_REQUEST['per_page'] ) ? (int) $_REQUEST['per_page'] : 20;
+		$unread_only = ! empty( $_REQUEST['unread_only'] );
+
+		$res = Notes_Adda_Notifications::get_for_user( $user_id, $page, $per_page, $unread_only );
+		wp_send_json_success( $res );
+	}
+
+	/**
+	 * Mark a single notification as read.
+	 */
+	public static function mark_notification_read() {
+		$user_id = self::check_auth();
+
+		$notification_id = isset( $_POST['notification_id'] ) ? (int) $_POST['notification_id'] : 0;
+		if ( $notification_id <= 0 ) {
+			self::send_error( new WP_Error( 'notes_adda_invalid_notification_id', 'Please provide a valid notification ID.' ) );
+		}
+
+		$result = Notes_Adda_Notifications::mark_as_read( $notification_id, $user_id );
+		if ( is_wp_error( $result ) ) {
+			self::send_error( $result );
+		}
+
+		$unread_count = Notes_Adda_Notifications::get_unread_count( $user_id );
+		wp_send_json_success( array( 'unread_count' => $unread_count ) );
+	}
+
+	/**
+	 * Mark all notifications as read for current user.
+	 */
+	public static function mark_all_notifications_read() {
+		$user_id = self::check_auth();
+
+		$result = Notes_Adda_Notifications::mark_all_as_read( $user_id );
+		if ( is_wp_error( $result ) ) {
+			self::send_error( $result );
+		}
+
+		wp_send_json_success( array( 'unread_count' => 0 ) );
+	}
+
+	/**
+	 * Get pending review count (Reviewers only).
+	 */
+	public static function get_pending_review_count() {
+		$user_id = self::check_auth();
+
+		if ( ! current_user_can( 'notes_adda_review_notes' ) && ! current_user_can( 'manage_options' ) ) {
+			self::send_error( new WP_Error( 'notes_adda_forbidden', 'You do not have permission to view review counts.' ) );
+		}
+
+		global $wpdb;
+		$notes_table = $wpdb->prefix . 'notes_adda_notes';
+		$count = (int) $wpdb->get_var( "SELECT COUNT(*) FROM $notes_table WHERE review_status = 'pending'" );
+
+		wp_send_json_success( array( 'count' => $count, 'pending_count' => $count ) );
+	}
+
+	/**
+	 * Rate an Expert (1 to 5 stars).
+	/**
+	 * Rate an Expert contextual to reviewed subject with quarter-star precision.
+	 */
+	public static function rate_expert() {
+		$user_id = self::check_auth();
+
+		$expert_id = isset( $_POST['expert_id'] ) ? (int) $_POST['expert_id'] : 0;
+		$subject   = isset( $_POST['subject'] ) ? sanitize_text_field( wp_unslash( $_POST['subject'] ) ) : '';
+		$rating    = isset( $_POST['rating'] ) ? floatval( $_POST['rating'] ) : 0;
+
+		if ( $expert_id <= 0 ) {
+			self::send_error( new WP_Error( 'notes_adda_invalid_expert_id', 'Please provide a valid Expert ID.' ) );
+		}
+
+		if ( empty( $subject ) ) {
+			self::send_error( new WP_Error( 'notes_adda_empty_subject', 'A valid subject is required to rate an expert.' ) );
+		}
+
+		if ( $expert_id === $user_id ) {
+			self::send_error( new WP_Error( 'notes_adda_cannot_rate_self', 'Experts cannot rate themselves.' ) );
+		}
+
+		$result = Notes_Adda_Ratings::rate( $expert_id, $user_id, $subject, $rating );
+		if ( is_wp_error( $result ) ) {
+			self::send_error( $result );
+		}
+
+		$expert_user = get_userdata( $expert_id );
+		$result['message'] = sprintf(
+			'Rated %s %s out of 5 stars for %s.',
+			$expert_user ? $expert_user->display_name : 'Expert',
+			number_format( $result['user_rating'], 2, '.', '' ),
+			$subject
+		);
+
+		wp_send_json_success( $result );
+	}
+
+	/**
+	 * Get Expert rating summary (subject-specific and overall).
+	 */
+	public static function get_expert_rating() {
+		$expert_id       = isset( $_REQUEST['expert_id'] ) ? (int) $_REQUEST['expert_id'] : 0;
+		$subject         = isset( $_REQUEST['subject'] ) ? sanitize_text_field( wp_unslash( $_REQUEST['subject'] ) ) : '';
+		$current_user_id = is_user_logged_in() ? get_current_user_id() : 0;
+
+		if ( $expert_id <= 0 ) {
+			self::send_error( new WP_Error( 'notes_adda_invalid_expert_id', 'Please provide a valid Expert ID.' ) );
+		}
+
+		$result = Notes_Adda_Ratings::get_expert_subject_summary( $expert_id, $subject, $current_user_id );
 		wp_send_json_success( $result );
 	}
 

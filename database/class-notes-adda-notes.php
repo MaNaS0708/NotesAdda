@@ -101,7 +101,7 @@ class Notes_Adda_Notes {
 
 		$table_name = $wpdb->prefix . 'notes_adda_notes';
 
-		// Every new upload starts as unverified
+		// Every new upload starts as pending
 		$inserted = $wpdb->insert(
 			$table_name,
 			array(
@@ -114,7 +114,7 @@ class Notes_Adda_Notes {
 				'file_url'       => $file_url,
 				'file_id'        => $file_id,
 				'like_count'     => 0,
-				'review_status'  => 'unverified',
+				'review_status'  => 'pending',
 				'reviewed_by'    => null,
 				'reviewed_at'    => null,
 				'review_note'    => null,
@@ -231,6 +231,46 @@ class Notes_Adda_Notes {
 			return new WP_Error( 'notes_adda_empty_update', 'No valid data provided for update.' );
 		}
 
+		// Workflow rules:
+		// 1. Rejected notes: When owner edits/resubmits a rejected note, reset review_status to 'pending'
+		//    and clear previous reviewer metadata so it re-enters the active review queue.
+		// 2. Verified notes: Meaningful content or file modifications (title, subject, chapter, description,
+		//    file URL, file ID, or syllabus scope) return the note to 'pending' for re-verification.
+		$current_status = ! empty( $note->review_status ) ? $note->review_status : 'pending';
+		if ( 'rejected' === $current_status ) {
+			$update_data['review_status'] = 'pending';
+			$update_format[]              = '%s';
+			$update_data['reviewed_by']   = null;
+			$update_format[]              = '%d';
+			$update_data['reviewed_at']   = null;
+			$update_format[]              = '%s';
+			$update_data['review_note']   = null;
+			$update_format[]              = '%s';
+		} elseif ( 'verified' === $current_status ) {
+			$content_fields = array( 'title', 'subject', 'chapter', 'description', 'file_url', 'file_id', 'is_whole_notes' );
+			$content_changed = false;
+			foreach ( $content_fields as $cf ) {
+				if ( isset( $update_data[ $cf ] ) ) {
+					$old_val = (string) $note->$cf;
+					$new_val = (string) $update_data[ $cf ];
+					if ( $old_val !== $new_val ) {
+						$content_changed = true;
+						break;
+					}
+				}
+			}
+			if ( $content_changed ) {
+				$update_data['review_status'] = 'pending';
+				$update_format[]              = '%s';
+				$update_data['reviewed_by']   = null;
+				$update_format[]              = '%d';
+				$update_data['reviewed_at']   = null;
+				$update_format[]              = '%s';
+				$update_data['review_note']   = null;
+				$update_format[]              = '%s';
+			}
+		}
+
 		$update_data['updated_at'] = current_time( 'mysql' );
 		$update_format[]           = '%s';
 
@@ -252,12 +292,12 @@ class Notes_Adda_Notes {
 	}
 
 	/**
-	 * Review a note (Verify / Mark Unverified).
+	 * Review a note (Verify / Reject).
 	 *
 	 * @param int    $note_id     Note ID.
 	 * @param int    $reviewer_id WordPress user ID of the reviewer.
-	 * @param string $status      Review status ('verified' or 'unverified').
-	 * @param string $review_note Optional note from reviewer.
+	 * @param string $status      Review status ('verified' or 'rejected').
+	 * @param string $review_note Required note from reviewer explaining approval or rejection reason.
 	 * @return object|WP_Error Updated note object or WP_Error.
 	 */
 	public static function review( $note_id, $reviewer_id, $status, $review_note = '' ) {
@@ -277,11 +317,6 @@ class Notes_Adda_Notes {
 			return new WP_Error( 'notes_adda_forbidden', 'You do not have permission to review notes.' );
 		}
 
-		$status = sanitize_key( $status );
-		if ( ! in_array( $status, array( 'verified', 'unverified' ), true ) ) {
-			return new WP_Error( 'notes_adda_invalid_status', 'Invalid review status. Allowed values: verified, unverified.' );
-		}
-
 		$note = self::get_by_id( $note_id );
 		if ( is_wp_error( $note ) ) {
 			return $note;
@@ -290,29 +325,32 @@ class Notes_Adda_Notes {
 			return new WP_Error( 'notes_adda_note_not_found', 'Note does not exist.' );
 		}
 
-		$table_name   = $wpdb->prefix . 'notes_adda_notes';
-		$review_note  = sanitize_textarea_field( trim( $review_note ) );
-		$now          = current_time( 'mysql' );
-
-		if ( 'verified' === $status ) {
-			$update_data = array(
-				'review_status' => 'verified',
-				'reviewed_by'   => $reviewer_id,
-				'reviewed_at'   => $now,
-				'review_note'   => ! empty( $review_note ) ? $review_note : null,
-				'updated_at'    => $now,
-			);
-			$format = array( '%s', '%d', '%s', '%s', '%s' );
-		} else {
-			$update_data = array(
-				'review_status' => 'unverified',
-				'reviewed_by'   => null,
-				'reviewed_at'   => null,
-				'review_note'   => ! empty( $review_note ) ? $review_note : null,
-				'updated_at'    => $now,
-			);
-			$format = array( '%s', '%d', '%s', '%s', '%s' );
+		// Self-review restriction: A reviewer cannot review their own note
+		if ( (int) $note->owner_id === $reviewer_id ) {
+			return new WP_Error( 'notes_adda_cannot_review_own_note', 'Reviewers cannot review their own notes.' );
 		}
+
+		$status = sanitize_key( $status );
+		if ( ! in_array( $status, array( 'verified', 'rejected' ), true ) ) {
+			return new WP_Error( 'notes_adda_invalid_status', 'Invalid review status. Allowed values: verified, rejected.' );
+		}
+
+		$review_note = sanitize_textarea_field( trim( $review_note ) );
+		if ( empty( $review_note ) ) {
+			return new WP_Error( 'notes_adda_missing_review_reason', 'A reviewer reason is required for both approval and rejection.' );
+		}
+
+		$table_name = $wpdb->prefix . 'notes_adda_notes';
+		$now        = current_time( 'mysql' );
+
+		$update_data = array(
+			'review_status' => $status,
+			'reviewed_by'   => $reviewer_id,
+			'reviewed_at'   => $now,
+			'review_note'   => $review_note,
+			'updated_at'    => $now,
+		);
+		$format = array( '%s', '%d', '%s', '%s', '%s' );
 
 		$updated = $wpdb->update(
 			$table_name,
@@ -324,6 +362,27 @@ class Notes_Adda_Notes {
 
 		if ( false === $updated ) {
 			return new WP_Error( 'notes_adda_review_failed', 'Failed to update review status in database.' );
+		}
+
+		// Create persistent in-app notification for the note owner
+		if ( class_exists( 'Notes_Adda_Notifications' ) && (int) $note->owner_id !== $reviewer_id ) {
+			if ( 'verified' === $status ) {
+				Notes_Adda_Notifications::create(
+					(int) $note->owner_id,
+					'note_verified',
+					'Note Verified: ' . $note->title,
+					'Your note "' . $note->title . '" has been verified and published to the library. Reason: ' . $review_note,
+					$note_id
+				);
+			} else {
+				Notes_Adda_Notifications::create(
+					(int) $note->owner_id,
+					'note_rejected',
+					'Note Rejected: ' . $note->title,
+					'Your note "' . $note->title . '" was rejected by the reviewer. Reason: ' . $review_note,
+					$note_id
+				);
+			}
 		}
 
 		return self::get_by_id( $note_id );
@@ -465,6 +524,17 @@ class Notes_Adda_Notes {
 	}
 
 	/**
+	 * Count total pending notes awaiting review.
+	 *
+	 * @return int Total pending notes count.
+	 */
+	public static function get_pending_review_count() {
+		global $wpdb;
+		$table_name = $wpdb->prefix . 'notes_adda_notes';
+		return (int) $wpdb->get_var( "SELECT COUNT(*) FROM $table_name WHERE review_status = 'pending'" );
+	}
+
+	/**
 	 * Retrieve rich details for a single note, including contributor profile, tags, and user permissions.
 	 *
 	 * @param int $note_id         Note ID.
@@ -482,6 +552,17 @@ class Notes_Adda_Notes {
 
 		$current_user_id = (int) $current_user_id;
 		$owner_id        = (int) $note->owner_id;
+		$is_owner        = ( $current_user_id > 0 && $current_user_id === $owner_id );
+		$super_owner_id  = (int) get_option( 'notes_adda_owner_id' );
+		$is_super_owner  = ( $super_owner_id > 0 && $current_user_id === $super_owner_id );
+		$is_admin        = $is_super_owner || user_can( $current_user_id, 'notes_adda_manage_users' ) || user_can( $current_user_id, 'manage_options' );
+		$is_reviewer     = $is_admin || user_can( $current_user_id, 'notes_adda_review_notes' );
+
+		// Visibility check: Non-verified (pending or rejected) notes are strictly private to owner and reviewers
+		$review_status   = ! empty( $note->review_status ) ? $note->review_status : 'pending';
+		if ( 'verified' !== $review_status && ! $is_owner && ! $is_reviewer ) {
+			return new WP_Error( 'notes_adda_forbidden', 'This note is not publicly available.' );
+		}
 
 		// 1. Owner & Profile Information
 		$owner = get_userdata( $owner_id );
@@ -497,12 +578,20 @@ class Notes_Adda_Notes {
 			'notes_count'  => $notes_count,
 		);
 
+		if ( class_exists( 'Notes_Adda_Ratings' ) && Notes_Adda_Ratings::is_expert( $owner_id ) ) {
+			$contributor['expert_rating'] = Notes_Adda_Ratings::get_expert_summary( $owner_id, $current_user_id );
+		}
+
 		// 2. Reviewer Information
-		$reviewer_name = '';
+		$reviewer_name   = '';
+		$reviewer_rating = null;
 		if ( ! empty( $note->reviewed_by ) ) {
 			$reviewer = get_userdata( (int) $note->reviewed_by );
 			if ( $reviewer ) {
 				$reviewer_name = $reviewer->display_name;
+			}
+			if ( 'verified' === $review_status && class_exists( 'Notes_Adda_Ratings' ) && Notes_Adda_Ratings::is_expert( (int) $note->reviewed_by ) ) {
+				$reviewer_rating = Notes_Adda_Ratings::get_expert_subject_summary( (int) $note->reviewed_by, $note->subject, $current_user_id );
 			}
 		}
 
@@ -527,44 +616,40 @@ class Notes_Adda_Notes {
 			}
 		}
 
-		// 5. Capabilities & Permissions
-		$is_owner       = ( $current_user_id > 0 && $current_user_id === $owner_id );
-		$super_owner_id = (int) get_option( 'notes_adda_owner_id' );
-		$is_super_owner = ( $super_owner_id > 0 && $current_user_id === $super_owner_id );
-		$is_admin       = $is_super_owner || user_can( $current_user_id, 'notes_adda_manage_users' ) || user_can( $current_user_id, 'manage_options' );
-
-		$can_review     = $is_admin || user_can( $current_user_id, 'notes_adda_review_notes' );
-		$can_edit       = $is_owner || $is_admin;
-		$can_delete     = $is_owner || $is_admin;
+		// 5. Capabilities & Permissions (Self-review is prohibited)
+		$can_review = $is_reviewer && ! $is_owner;
+		$can_edit   = $is_owner || $is_admin;
+		$can_delete = $is_owner || $is_admin;
 
 		return array(
-			'id'             => (int) $note->id,
-			'owner_id'       => $owner_id,
-			'title'          => $note->title,
-			'subject'        => $note->subject,
-			'chapter'        => $note->chapter,
-			'is_whole_notes' => (int) $note->is_whole_notes,
-			'description'    => $note->description,
-			'file_url'       => $note->file_url,
-			'file_id'        => (int) $note->file_id,
-			'like_count'     => (int) $note->like_count,
-			'review_status'  => ! empty( $note->review_status ) ? $note->review_status : 'unverified',
-			'reviewed_by'    => $note->reviewed_by ? (int) $note->reviewed_by : null,
-			'reviewed_at'    => $note->reviewed_at,
-			'review_note'    => $note->review_note,
-			'created_at'     => $note->created_at,
-			'updated_at'     => $note->updated_at,
-			'uploader_name'  => $contributor['display_name'],
-			'uploader_login' => $contributor['username'],
-			'reviewer_name'  => $reviewer_name,
-			'is_bookmarked'  => $is_bookmarked,
-			'is_liked'       => $is_liked,
-			'is_owner'       => $is_owner,
-			'can_edit'       => $can_edit,
-			'can_delete'     => $can_delete,
-			'can_review'     => $can_review,
-			'contributor'    => $contributor,
-			'tags'           => $tags,
+			'id'              => (int) $note->id,
+			'owner_id'        => $owner_id,
+			'title'           => $note->title,
+			'subject'         => $note->subject,
+			'chapter'         => $note->chapter,
+			'is_whole_notes'  => (int) $note->is_whole_notes,
+			'description'     => $note->description,
+			'file_url'        => $note->file_url,
+			'file_id'         => (int) $note->file_id,
+			'like_count'      => (int) $note->like_count,
+			'review_status'   => $review_status,
+			'reviewed_by'     => $note->reviewed_by ? (int) $note->reviewed_by : null,
+			'reviewed_at'     => $note->reviewed_at,
+			'review_note'     => $note->review_note,
+			'created_at'      => $note->created_at,
+			'updated_at'      => $note->updated_at,
+			'uploader_name'   => $contributor['display_name'],
+			'uploader_login'  => $contributor['username'],
+			'reviewer_name'   => $reviewer_name,
+			'reviewer_rating' => $reviewer_rating,
+			'is_bookmarked'   => $is_bookmarked,
+			'is_liked'        => $is_liked,
+			'is_owner'        => $is_owner,
+			'can_edit'        => $can_edit,
+			'can_delete'      => $can_delete,
+			'can_review'      => $can_review,
+			'contributor'     => $contributor,
+			'tags'            => $tags,
 		);
 	}
 }
