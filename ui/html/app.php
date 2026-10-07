@@ -3,11 +3,8 @@
         <div class="na-auth-container">
             <div class="na-auth-card">
                 <div class="na-brand-header">
-                    <div class="na-brand-icon">
-                        <span class="dashicons dashicons-book-alt"></span>
-                    </div>
-                    <h1 class="na-brand-title">Notes Adda</h1>
-                    <p class="na-brand-tagline">Your collaborative student notes hub</p>
+                    <img src="<?php echo esc_url( NOTES_ADDA_URL . 'ui/assets/images/logoname.png' ); ?>" alt="Notes Adda" class="na-auth-brand-logo">
+                    <p class="na-brand-tagline">Cyber Knowledge &amp; Collaborative Notes Network</p>
                 </div>
 
                 <div class="na-auth-nav">
@@ -101,13 +98,9 @@
             <!-- Sidebar -->
             <aside class="na-sidebar">
                 <div class="na-sidebar-header">
-                    <div class="na-sidebar-brand">
-                        <div class="na-brand-badge"><span class="dashicons dashicons-welcome-learn-more"></span></div>
-                        <div>
-                            <span class="na-brand-name">Notes Adda</span>
-                            <span class="na-brand-caption">Study library</span>
-                        </div>
-                    </div>
+                    <a href="<?php echo esc_url( home_url( '/' ) ); ?>" class="na-sidebar-brand-link" title="Notes Adda">
+                        <img src="<?php echo esc_url( NOTES_ADDA_URL . 'ui/assets/images/logoname.png' ); ?>" alt="Notes Adda" class="na-sidebar-brand-logo">
+                    </a>
                 </div>
                 
                 <div class="na-user-card">
@@ -147,7 +140,7 @@
                         </li>
                         <li>
                             <a href="#bookmarks" class="na-nav-item" data-view="bookmarks">
-                                <span class="dashicons dashicons-bookmark"></span>
+                                <span class="na-nav-icon"><svg viewBox="0 0 24 24" class="na-svg-nav" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg></span>
                                 <span class="na-nav-text">Bookmarks</span>
                             </a>
                         </li>
@@ -203,12 +196,11 @@
             <main class="na-main-container">
                 <!-- Mobile Top Bar -->
                 <header class="na-mobile-header">
-                    <div class="na-sidebar-brand">
-                        <div class="na-brand-badge"><span class="dashicons dashicons-welcome-learn-more"></span></div>
-                        <span class="na-brand-name">Notes Adda</span>
+                    <div class="na-mobile-brand">
+                        <img src="<?php echo esc_url( NOTES_ADDA_URL . 'ui/assets/images/logoname.png' ); ?>" alt="Notes Adda" class="na-mobile-brand-logo">
                     </div>
                     <button type="button" class="na-btn na-btn-primary na-btn-sm" id="na-mobile-new-note-btn">
-                        <span class="dashicons dashicons-plus"></span> New
+                        <span class="dashicons dashicons-plus"></span> <span>Upload</span>
                     </button>
                 </header>
 
@@ -344,7 +336,9 @@
 
                     <!-- Empty State -->
                     <div id="na-bookmarks-empty" class="na-state-box na-empty-box" style="display:none;">
-                        <div class="na-state-icon-wrap"><span class="dashicons dashicons-bookmark na-state-icon"></span></div>
+                        <div class="na-state-icon-wrap">
+                            <svg viewBox="0 0 24 24" class="na-svg-bookmark na-state-icon" width="32" height="32" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
+                        </div>
                         <h3 class="na-state-title">No saved notes yet</h3>
                         <p class="na-state-desc">Save useful notes to find them quickly later.</p>
                         <button type="button" class="na-btn na-btn-primary" id="na-empty-browse-btn">

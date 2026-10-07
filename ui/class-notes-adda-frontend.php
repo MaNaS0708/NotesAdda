@@ -117,6 +117,12 @@ class Notes_Adda_Frontend {
 		if ( has_shortcode( $post->post_content, 'notes_adda_landing' ) ) {
 			show_admin_bar( false );
 			wp_enqueue_style(
+				'notes-adda-cyber-fonts',
+				'https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&family=Space+Grotesk:wght@500;600;700&display=swap',
+				array(),
+				null
+			);
+			wp_enqueue_style(
 				'notes-adda-landing-style',
 				NOTES_ADDA_URL . 'ui/css/notes-adda-landing.css',
 				array(),
@@ -128,6 +134,12 @@ class Notes_Adda_Frontend {
 		// Check for App shortcode
 		if ( has_shortcode( $post->post_content, 'notes_adda_app' ) ) {
 			show_admin_bar( false );
+			wp_enqueue_style(
+				'notes-adda-cyber-fonts',
+				'https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&family=Space+Grotesk:wght@500;600;700&display=swap',
+				array(),
+				null
+			);
 			wp_enqueue_style(
 				'notes-adda-app-style',
 				NOTES_ADDA_URL . 'ui/css/notes-adda-app.css',
@@ -190,6 +202,8 @@ class Notes_Adda_Frontend {
 					'can_manage_users'     => $can_manage_users,
 					'can_manage_all_notes' => $can_manage_all,
 					'login_url'            => wp_login_url( get_permalink() ),
+					'logo_icon'            => NOTES_ADDA_URL . 'ui/assets/images/logo_wui.png',
+					'logo_name'            => NOTES_ADDA_URL . 'ui/assets/images/logoname.png',
 				)
 			);
 

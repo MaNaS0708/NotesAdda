@@ -16,14 +16,8 @@ $developed_by = get_option( 'notes_adda_developed_by', 'Notes Adda Team' );
 	<header class="na-landing-header">
 		<div class="na-landing-container">
 			<nav class="na-landing-nav">
-				<a href="<?php echo esc_url( home_url( '/' ) ); ?>" class="na-landing-brand-link">
-					<div class="na-landing-brand-icon">
-						<span class="dashicons dashicons-book-alt"></span>
-					</div>
-					<div class="na-landing-brand-text">
-						<span class="na-landing-brand-title">Notes Adda</span>
-						<span class="na-landing-brand-tag">Student Knowledge Hub</span>
-					</div>
+				<a href="<?php echo esc_url( home_url( '/' ) ); ?>" class="na-landing-brand-link" title="Notes Adda">
+					<img src="<?php echo esc_url( NOTES_ADDA_URL . 'ui/assets/images/logoname.png' ); ?>" alt="Notes Adda" class="na-landing-brand-img">
 				</a>
 
 				<ul class="na-landing-menu">
@@ -147,7 +141,7 @@ $developed_by = get_option( 'notes_adda_developed_by', 'Notes Adda Team' );
 									<span>142</span>
 								</span>
 								<span class="na-landing-stat-item">
-									<span class="dashicons dashicons-bookmark"></span>
+									<svg viewBox="0 0 24 24" class="na-svg-stat" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
 									<span>58</span>
 								</span>
 							</div>
@@ -196,7 +190,7 @@ $developed_by = get_option( 'notes_adda_developed_by', 'Notes Adda Team' );
 				<!-- Feature 3 -->
 				<div class="na-landing-feature-card">
 					<div class="na-landing-feature-icon-wrap">
-						<span class="dashicons dashicons-bookmark"></span>
+						<svg viewBox="0 0 24 24" class="na-svg-feature" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
 					</div>
 					<h3 class="na-landing-feature-title">Personal Bookmarks</h3>
 					<p class="na-landing-feature-desc">Save essential notes directly to your personal study library with one click. Access your bookmarked study guides quickly before exams.</p>
@@ -426,14 +420,8 @@ $developed_by = get_option( 'notes_adda_developed_by', 'Notes Adda Team' );
 	<footer class="na-landing-footer">
 		<div class="na-landing-container">
 			<div class="na-landing-footer-top">
-				<a href="<?php echo esc_url( home_url( '/' ) ); ?>" class="na-landing-brand-link">
-					<div class="na-landing-brand-icon">
-						<span class="dashicons dashicons-book-alt"></span>
-					</div>
-					<div class="na-landing-brand-text">
-						<span class="na-landing-brand-title">Notes Adda</span>
-						<span class="na-landing-brand-tag">Student Knowledge Sharing</span>
-					</div>
+				<a href="<?php echo esc_url( home_url( '/' ) ); ?>" class="na-landing-brand-link" title="Notes Adda">
+					<img src="<?php echo esc_url( NOTES_ADDA_URL . 'ui/assets/images/logoname.png' ); ?>" alt="Notes Adda" class="na-landing-brand-img">
 				</a>
 
 				<ul class="na-landing-footer-links">

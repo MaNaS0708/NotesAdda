@@ -182,6 +182,16 @@ class Notes_Adda_Bookmarks {
 		);
 		$total = (int) $wpdb->get_var( $count_sql );
 
+		if ( 0 === $total ) {
+			return array(
+				'items'       => array(),
+				'total'       => 0,
+				'page'        => $page,
+				'per_page'    => $per_page,
+				'total_pages' => 0,
+			);
+		}
+
 		$items_sql = $wpdb->prepare(
 			"SELECT n.*, b.created_at AS bookmarked_at 
 			FROM $bookmarks_table b 

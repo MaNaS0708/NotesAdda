@@ -37,7 +37,14 @@
                         this.loadNotes(this.activeView);
                     }
                 } else {
-                    this.loadNotes(this.activeView);
+                    const hashView = window.location.hash ? window.location.hash.replace('#', '') : '';
+                    if (hashView && ['library', 'my-notes', 'bookmarks', 'review-queue', 'subject-requests', 'subjects', 'users'].includes(hashView)) {
+                        $('.na-nav-item').removeClass('active');
+                        $(`.na-nav-item[data-view="${hashView}"]`).addClass('active');
+                        this.switchView(hashView);
+                    } else {
+                        this.loadNotes(this.activeView);
+                    }
                 }
 
                 if (NotesAdda.can_manage_subjects) {
@@ -643,14 +650,18 @@
                         $empty.show();
                     } else {
                         self.setResultSummary(view, 'error');
-                        $container.html('<div class="na-state-box"><p style="color:var(--na-danger);">' + (res.data && res.data.message ? self.escapeHtml(res.data.message) : 'Failed to load notes. Please try again.') + '</p></div>');
+                        const errorMsg = (res && res.data && res.data.message) ? res.data.message : 'Failed to load notes. Please try again.';
+                        $container.html('<div class="na-state-box"><p style="color:var(--na-danger);">' + self.escapeHtml(errorMsg) + '</p></div>');
                     }
                 },
                 error: function(xhr, status, error) {
                     console.error('Notes Adda loadNotes error:', status, error, xhr.responseText);
                     $loading.hide();
                     self.setResultSummary(view, 'error');
-                    $container.html('<div class="na-state-box"><p style="color:var(--na-danger);">Failed to load notes. Please try again.</p></div>');
+                    const errorMsg = (xhr.responseJSON && xhr.responseJSON.data && xhr.responseJSON.data.message)
+                        ? xhr.responseJSON.data.message
+                        : (xhr.status === 401 ? 'Please sign in to view this section.' : 'Failed to load notes. Please try again.');
+                    $container.html('<div class="na-state-box"><p style="color:var(--na-danger);">' + self.escapeHtml(errorMsg) + '</p></div>');
                 }
             });
         },
@@ -742,7 +753,7 @@
                                     <span class="dashicons dashicons-pdf"></span>
                                 </a>` : ''}
                                 <button type="button" class="na-icon-btn na-btn-bookmark ${isBookmarked ? 'bookmarked' : ''}" data-id="${note.id}" title="${isBookmarked ? 'Remove saved note' : 'Save note'}" aria-label="${isBookmarked ? 'Remove saved note' : 'Save note'}">
-                                    <span class="dashicons dashicons-bookmark"></span>
+                                    <svg viewBox="0 0 24 24" class="na-svg-bookmark" width="16" height="16" fill="${isBookmarked ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
                                 </button>
                                 <button type="button" class="na-icon-btn na-btn-like" title="Like note" aria-label="Like ${self.escapeHtml(note.title)}">
                                     <span class="dashicons dashicons-heart"></span>
@@ -1085,7 +1096,8 @@
                 .toggleClass('bookmarked', newStatus)
                 .attr('title', newStatus ? 'Remove saved note' : 'Save note')
                 .attr('aria-label', newStatus ? 'Remove saved note' : 'Save note')
-                .find('.na-btn-text, .na-bookmark-text').text(newStatus ? 'Saved' : 'Save');
+                .find('.na-btn-text, .na-bookmark-text').text(newStatus ? 'Saved' : 'Save Note');
+            $matchingBtns.find('.na-svg-bookmark').attr('fill', newStatus ? 'currentColor' : 'none');
 
             $.post(NotesAdda.ajax_url, {
                 action: 'notes_adda_toggle_bookmark',
@@ -1094,12 +1106,13 @@
             }, function(res) {
                 $matchingBtns.prop('disabled', false).removeClass('loading');
                 if (res.success) {
-                    const isBookmarked = res.data.is_bookmarked;
+                    const isBookmarked = !!res.data.is_bookmarked;
                     $matchingBtns
                         .toggleClass('bookmarked', isBookmarked)
                         .attr('title', isBookmarked ? 'Remove saved note' : 'Save note')
                         .attr('aria-label', isBookmarked ? 'Remove saved note' : 'Save note')
-                        .find('.na-btn-text, .na-bookmark-text').text(isBookmarked ? 'Saved' : 'Save');
+                        .find('.na-btn-text, .na-bookmark-text').text(isBookmarked ? 'Saved' : 'Save Note');
+                    $matchingBtns.find('.na-svg-bookmark').attr('fill', isBookmarked ? 'currentColor' : 'none');
 
                     // If on bookmarks view and removed, reload
                     if (self.activeView === 'bookmarks' && !isBookmarked) {
@@ -1111,18 +1124,23 @@
                         .toggleClass('bookmarked', wasBookmarked)
                         .attr('title', wasBookmarked ? 'Remove saved note' : 'Save note')
                         .attr('aria-label', wasBookmarked ? 'Remove saved note' : 'Save note')
-                        .find('.na-btn-text, .na-bookmark-text').text(wasBookmarked ? 'Saved' : 'Save');
+                        .find('.na-btn-text, .na-bookmark-text').text(wasBookmarked ? 'Saved' : 'Save Note');
+                    $matchingBtns.find('.na-svg-bookmark').attr('fill', wasBookmarked ? 'currentColor' : 'none');
                     alert(res.data && res.data.message ? res.data.message : 'Could not update bookmark.');
                 }
-            }).fail(function() {
+            }).fail(function(xhr) {
                 $matchingBtns.prop('disabled', false).removeClass('loading');
                 // Revert
                 $matchingBtns
                     .toggleClass('bookmarked', wasBookmarked)
                     .attr('title', wasBookmarked ? 'Remove saved note' : 'Save note')
                     .attr('aria-label', wasBookmarked ? 'Remove saved note' : 'Save note')
-                    .find('.na-btn-text, .na-bookmark-text').text(wasBookmarked ? 'Saved' : 'Save');
-                alert('An error occurred updating bookmark.');
+                    .find('.na-btn-text, .na-bookmark-text').text(wasBookmarked ? 'Saved' : 'Save Note');
+                $matchingBtns.find('.na-svg-bookmark').attr('fill', wasBookmarked ? 'currentColor' : 'none');
+                const errMsg = xhr.responseJSON && xhr.responseJSON.data && xhr.responseJSON.data.message
+                    ? xhr.responseJSON.data.message
+                    : 'An error occurred updating bookmark.';
+                alert(errMsg);
             });
         },
 
@@ -1342,8 +1360,8 @@
                                 <h4 class="na-side-card-title">Actions</h4>
                                 <div class="na-note-actions-stack">
                                     <button type="button" class="na-btn na-btn-block na-btn-bookmark ${isBookmarked ? 'bookmarked' : ''}" data-id="${note.id}" title="${isBookmarked ? 'Remove saved note' : 'Save note'}" aria-label="${isBookmarked ? 'Remove saved note' : 'Save note'}">
-                                        <span class="dashicons dashicons-bookmark"></span>
-                                        <span class="na-btn-text">${isBookmarked ? 'Saved' : 'Save'}</span>
+                                        <svg viewBox="0 0 24 24" class="na-svg-bookmark" width="18" height="18" fill="${isBookmarked ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
+                                        <span class="na-btn-text">${isBookmarked ? 'Saved' : 'Save Note'}</span>
                                     </button>
 
                                     <button type="button" class="na-btn na-btn-block na-btn-like ${isLiked ? 'liked' : ''}" data-id="${note.id}" title="Like note" aria-label="Like note">
@@ -1465,9 +1483,9 @@
                             <span>Open & Download PDF</span>
                         </a>` : '<p style="color:var(--na-muted);">No document attached.</p>'}
                         
-                        <button type="button" class="na-btn na-btn-secondary ${isBookmarked ? 'bookmarked' : ''}" id="na-modal-bookmark-btn" data-id="${note.id}" title="${isBookmarked ? 'Remove saved note' : 'Save note'}" aria-label="${isBookmarked ? 'Remove saved note' : 'Save note'}">
-                            <span class="dashicons dashicons-bookmark"></span>
-                            <span class="na-btn-text">${isBookmarked ? 'Saved' : 'Save'}</span>
+                        <button type="button" class="na-btn na-btn-secondary na-btn-bookmark ${isBookmarked ? 'bookmarked' : ''}" id="na-modal-bookmark-btn" data-id="${note.id}" title="${isBookmarked ? 'Remove saved note' : 'Save note'}" aria-label="${isBookmarked ? 'Remove saved note' : 'Save note'}">
+                            <svg viewBox="0 0 24 24" class="na-svg-bookmark" width="18" height="18" fill="${isBookmarked ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
+                            <span class="na-btn-text">${isBookmarked ? 'Saved' : 'Save Note'}</span>
                         </button>
                     </div>
                 `;
@@ -2315,8 +2333,9 @@
             }, function(res) {
                 $select.prop('disabled', false);
                 if (res.success) {
-                    $select.data('current-role', newRole);
-                    self.showToast('Role updated successfully.');
+                    $select.data('current-role', newRole).attr('data-current-role', newRole);
+                    $(`.na-user-role-select[data-user-id="${userId}"]`).not($select).val(newRole).data('current-role', newRole).attr('data-current-role', newRole);
+                    self.showToast('Role updated successfully. The user may need to refresh to see their updated access.');
                 } else {
                     $select.val($select.data('current-role'));
                     alert('Error: ' + (res.data ? res.data.message : 'Could not update role.'));
