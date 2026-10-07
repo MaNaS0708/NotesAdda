@@ -43,6 +43,15 @@
                 if (NotesAdda.can_manage_subjects) {
                     this.loadAdminSubjectRequests();
                 }
+            } else {
+                const urlParams = new URLSearchParams(window.location.search);
+                const authMode = urlParams.get('auth');
+                const hash = window.location.hash;
+                if (authMode === 'register' || hash === '#register') {
+                    $('[data-switch="register"]').trigger('click');
+                } else if (authMode === 'login' || hash === '#login') {
+                    $('[data-switch="login"]').trigger('click');
+                }
             }
         },
 

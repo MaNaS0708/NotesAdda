@@ -12,7 +12,9 @@ class Notes_Adda_Activator {
 		self::bootstrap_admin();
 		self::migrate_existing_users();
 		self::migrate_subjects();
+		self::provision_pages();
 
+		update_option( 'notes_adda_version', NOTES_ADDA_VERSION );
 		update_option( 'notes_adda_db_version', NOTES_ADDA_VERSION );
 	}
 
@@ -32,7 +34,9 @@ class Notes_Adda_Activator {
 		$bookmarks_table = $wpdb->prefix . 'notes_adda_bookmarks';
 		$subject_requests_table = $wpdb->prefix . 'notes_adda_subject_requests';
 
-		require_once ABSPATH . 'wp-admin/includes/upgrade.php';
+		if ( file_exists( ABSPATH . 'wp-admin/includes/upgrade.php' ) ) {
+			require_once ABSPATH . 'wp-admin/includes/upgrade.php';
+		}
 
 		$sql = array(
 
@@ -175,7 +179,7 @@ class Notes_Adda_Activator {
 			}
 		}
 
-		// 2. Expert Role (Can review notes, upload notes, request subjects; cannot delete others' notes or manage users/subjects)
+		// 2. Expert Role
 		$expert_caps = array(
 			'read'                        => true,
 			'notes_adda_upload_notes'     => true,
@@ -237,23 +241,12 @@ class Notes_Adda_Activator {
 		$dev_user = get_user_by( 'login', 'notes_adda_dev' );
 		if ( $dev_user ) {
 			update_option( 'notes_adda_owner_id', (int) $dev_user->ID );
-			// Give that user BOTH administrator and notes_adda_admin using add_role()
 			$dev_user->add_role( 'administrator' );
 			$dev_user->add_role( 'notes_adda_admin' );
-		} else {
-			// Record safe notice if notes_adda_dev does not exist
-			if ( is_admin() ) {
-				add_action( 'admin_notices', array( __CLASS__, 'render_missing_dev_notice' ) );
-			}
 		}
 	}
 
-	public static function render_missing_dev_notice() {
-		echo '<div class="notice notice-warning is-dismissible"><p>' . esc_html__( 'Notes Adda: Account "notes_adda_dev" was not found. Please create the user account first to assign Notes Adda Admin privileges.', 'notes-adda' ) . '</p></div>';
-	}
-
 	public static function migrate_existing_users() {
-		// Guard with an idempotent option flag so migration runs once
 		if ( get_option( 'notes_adda_users_migrated_v2' ) ) {
 			return;
 		}
@@ -262,7 +255,6 @@ class Notes_Adda_Activator {
 		$users    = get_users( array( 'fields' => 'all' ) );
 
 		foreach ( $users as $user ) {
-			// Never touch owner
 			if ( $owner_id > 0 && (int) $user->ID === $owner_id ) {
 				$user->add_role( 'administrator' );
 				$user->add_role( 'notes_adda_admin' );
@@ -277,25 +269,20 @@ class Notes_Adda_Activator {
 
 			$user_roles = (array) $user->roles;
 
-			// If user is administrator or has manage_options, grant notes_adda_admin as an ADDITIONAL role.
-			// NEVER remove administrator or use set_role()!
 			if ( in_array( 'administrator', $user_roles, true ) || user_can( $user->ID, 'manage_options' ) ) {
 				$user->add_role( 'administrator' );
 				$user->add_role( 'notes_adda_admin' );
 				continue;
 			}
 
-			// If user already has a Notes Adda role (e.g. expert or admin), keep it intact
 			if ( in_array( 'notes_adda_expert', $user_roles, true ) || in_array( 'notes_adda_admin', $user_roles, true ) ) {
 				continue;
 			}
 
-			// If user is subscriber or has no roles, migrate to notes_adda_student
 			if ( empty( $user_roles ) || in_array( 'subscriber', $user_roles, true ) ) {
 				$user->remove_role( 'subscriber' );
 				$user->add_role( 'notes_adda_student' );
 			} else {
-				// Other existing roles (e.g., author, editor): add notes_adda_student without replacing existing role
 				$user->add_role( 'notes_adda_student' );
 			}
 		}
@@ -344,6 +331,157 @@ class Notes_Adda_Activator {
 						),
 						array( '%s', '%s', '%d', '%s' )
 					);
+				}
+			}
+		}
+	}
+
+	/**
+	 * Safe, idempotent provisioning of Landing & App pages + homepage setup.
+	 */
+	public static function provision_pages() {
+		global $wpdb;
+
+		// 1. Provision / Verify Landing Page
+		$landing_page_id = 0;
+		$landing_post    = get_page_by_path( 'notes-adda-home' );
+
+		if ( $landing_post ) {
+			$landing_page_id = $landing_post->ID;
+			// Ensure it has publish status
+			if ( 'publish' !== $landing_post->post_status ) {
+				wp_update_post( array(
+					'ID'          => $landing_page_id,
+					'post_status' => 'publish',
+				) );
+			}
+			// Ensure it has the shortcode
+			if ( ! has_shortcode( $landing_post->post_content, 'notes_adda_landing' ) ) {
+				wp_update_post( array(
+					'ID'           => $landing_page_id,
+					'post_content' => '[notes_adda_landing]',
+				) );
+			}
+		} else {
+			// Check if any existing page has [notes_adda_landing]
+			$existing_landing_id = (int) $wpdb->get_var(
+				"SELECT ID FROM {$wpdb->posts} 
+				 WHERE post_type = 'page' 
+				   AND post_content LIKE '%[notes_adda_landing]%' 
+				 ORDER BY ID ASC LIMIT 1"
+			);
+
+			if ( $existing_landing_id > 0 ) {
+				$landing_page_id = $existing_landing_id;
+				if ( 'publish' !== get_post_status( $landing_page_id ) ) {
+					wp_update_post( array(
+						'ID'          => $landing_page_id,
+						'post_status' => 'publish',
+					) );
+				}
+			} else {
+				// Create the landing page
+				$landing_page_id = wp_insert_post( array(
+					'post_title'     => 'Notes Adda',
+					'post_name'      => 'notes-adda-home',
+					'post_content'   => '[notes_adda_landing]',
+					'post_status'    => 'publish',
+					'post_type'      => 'page',
+					'comment_status' => 'closed',
+					'ping_status'    => 'closed',
+				) );
+			}
+		}
+
+		if ( $landing_page_id > 0 && ! is_wp_error( $landing_page_id ) ) {
+			update_option( 'notes_adda_landing_page_id', (int) $landing_page_id );
+		}
+
+		// 2. Provision / Verify App Page
+		$app_page_id = 0;
+		$existing_app_id = (int) $wpdb->get_var(
+			"SELECT ID FROM {$wpdb->posts} 
+			 WHERE post_type = 'page' 
+			   AND post_content LIKE '%[notes_adda_app]%' 
+			 ORDER BY ID ASC LIMIT 1"
+		);
+
+		if ( $existing_app_id > 0 ) {
+			$app_page_id = $existing_app_id;
+			if ( 'publish' !== get_post_status( $app_page_id ) ) {
+				wp_update_post( array(
+					'ID'          => $app_page_id,
+					'post_status' => 'publish',
+				) );
+			}
+		} else {
+			$app_post = get_page_by_path( 'notes-adda' );
+			if ( $app_post ) {
+				$app_page_id = $app_post->ID;
+				if ( 'publish' !== $app_post->post_status ) {
+					wp_update_post( array(
+						'ID'          => $app_page_id,
+						'post_status' => 'publish',
+					) );
+				}
+				if ( ! has_shortcode( $app_post->post_content, 'notes_adda_app' ) ) {
+					wp_update_post( array(
+						'ID'           => $app_page_id,
+						'post_content' => '[notes_adda_app]',
+					) );
+				}
+			} else {
+				$app_page_id = wp_insert_post( array(
+					'post_title'     => 'Notes Adda App',
+					'post_name'      => 'notes-adda',
+					'post_content'   => '[notes_adda_app]',
+					'post_status'    => 'publish',
+					'post_type'      => 'page',
+					'comment_status' => 'closed',
+					'ping_status'    => 'closed',
+				) );
+			}
+		}
+
+		if ( $app_page_id > 0 && ! is_wp_error( $app_page_id ) ) {
+			update_option( 'notes_adda_app_page_id', (int) $app_page_id );
+		}
+
+		// 3. Homepage Handling with Safety Safeguards
+		if ( $landing_page_id > 0 && ! is_wp_error( $landing_page_id ) ) {
+			$show_on_front = get_option( 'show_on_front', 'posts' );
+			$page_on_front = (int) get_option( 'page_on_front', 0 );
+
+			// Case A: Homepage is default/empty ('posts' or 0)
+			if ( 'page' !== $show_on_front || $page_on_front <= 0 ) {
+				update_option( 'show_on_front', 'page' );
+				update_option( 'page_on_front', (int) $landing_page_id );
+				delete_option( 'notes_adda_unrelated_homepage_notice' );
+			} elseif ( $page_on_front === (int) $landing_page_id ) {
+				// Case B: Already set to this landing page
+				delete_option( 'notes_adda_unrelated_homepage_notice' );
+			} else {
+				// Case C: A custom static homepage is set ($page_on_front > 0). Check if it belongs to Notes Adda.
+				$current_front_post = get_post( $page_on_front );
+				$is_na_page         = false;
+
+				if ( $current_front_post ) {
+					if ( has_shortcode( $current_front_post->post_content, 'notes_adda_landing' ) ||
+					     has_shortcode( $current_front_post->post_content, 'notes_adda_app' ) ||
+					     'notes-adda-home' === $current_front_post->post_name ||
+					     'notes-adda' === $current_front_post->post_name ) {
+						$is_na_page = true;
+					}
+				}
+
+				if ( $is_na_page ) {
+					// It's a Notes Adda page, update to current landing page
+					update_option( 'show_on_front', 'page' );
+					update_option( 'page_on_front', (int) $landing_page_id );
+					delete_option( 'notes_adda_unrelated_homepage_notice' );
+				} else {
+					// SAFEGUARD: An unrelated custom homepage is active. Do NOT overwrite.
+					update_option( 'notes_adda_unrelated_homepage_notice', 1 );
 				}
 			}
 		}

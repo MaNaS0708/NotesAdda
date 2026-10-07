@@ -1,8 +1,8 @@
 <?php
 /**
  * Plugin Name: Notes Adda
- * Description: Student notes sharing application with review workflows, subjects, personal bookmarks, and role governance.
- * Version: 0.2.1
+ * Description: Student notes sharing application with review workflows, subjects, personal bookmarks, role governance, and public landing page.
+ * Version: 0.3.0
  * Author: Manas
  * Text Domain: notes-adda
  */
@@ -11,7 +11,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'NOTES_ADDA_VERSION', '0.2.2' );
+define( 'NOTES_ADDA_VERSION', '0.3.0' );
 define( 'NOTES_ADDA_PATH', plugin_dir_path( __FILE__ ) );
 define( 'NOTES_ADDA_URL', plugin_dir_url( __FILE__ ) );
 
@@ -33,11 +33,27 @@ require_once NOTES_ADDA_PATH . 'ajax/class-notes-adda-auth.php';
 
 register_activation_hook( __FILE__, array( 'Notes_Adda_Activator', 'activate' ) );
 
-// Auto-upgrade schema & roles if version changed
-add_action( 'plugins_loaded', function() {
-	$installed_ver = get_option( 'notes_adda_db_version' );
+// Auto-upgrade schema, roles, and provision pages if version changed
+add_action( 'init', function() {
+	$installed_ver = get_option( 'notes_adda_version' );
 	if ( $installed_ver !== NOTES_ADDA_VERSION ) {
 		Notes_Adda_Activator::activate();
+	}
+} );
+
+// Admin notice when an unrelated custom homepage was detected and preserved
+add_action( 'admin_notices', function() {
+	if ( get_option( 'notes_adda_unrelated_homepage_notice' ) ) {
+		$landing_page_id = (int) get_option( 'notes_adda_landing_page_id' );
+		$landing_url     = $landing_page_id > 0 ? get_permalink( $landing_page_id ) : home_url( '/notes-adda-home/' );
+		$reading_url     = admin_url( 'options-reading.php' );
+		?>
+		<div class="notice notice-info is-dismissible">
+			<p>
+				<strong>Notes Adda:</strong> The Notes Adda landing page was created (<a href="<?php echo esc_url( $landing_url ); ?>" target="_blank">view page</a>). Because your site currently has a custom homepage configured, your existing homepage was preserved. To set Notes Adda as your site homepage, navigate to <a href="<?php echo esc_url( $reading_url ); ?>">Settings &rarr; Reading</a> and select <em>Notes Adda</em> as your Homepage.
+			</p>
+		</div>
+		<?php
 	}
 } );
 
