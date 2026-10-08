@@ -1,0 +1,328 @@
+/**
+ * Notes Adda - Library & Note Card Styles
+ * Note cards, responsive metadata chips, clean dates, action bars, tags, and dedicated note details view.
+ *
+ * @package Notes_Adda
+ */
+
+/* ==================================================
+   CARDS GRID
+   ================================================== */
+.na-cards-grid {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(clamp(280px, 30vw, 360px), 1fr));
+	gap: 20px;
+}
+
+/* ==================================================
+   NOTE CARD
+   ================================================== */
+.na-card {
+	display: flex;
+	min-height: 280px;
+	flex-direction: column;
+	padding: 22px;
+	border: 1px solid var(--na-line);
+	border-radius: var(--na-radius-md);
+	background: var(--na-surface);
+	box-shadow: var(--na-shadow-sm);
+	transition: transform var(--na-transition), box-shadow var(--na-transition), border var(--na-transition);
+	position: relative;
+}
+
+.na-card:hover {
+	border-color: rgba(0, 255, 102, 0.4);
+	box-shadow: var(--na-shadow-md), 0 0 16px rgba(0, 255, 102, 0.12);
+	transform: translateY(-2px);
+}
+
+.na-card-verified {
+	border-top: 3px solid var(--na-brand);
+}
+
+.na-card-pending {
+	border-top: 3px solid var(--na-warning);
+}
+
+.na-card-rejected {
+	border-top: 3px solid var(--na-danger);
+}
+
+.na-card-top {
+	margin-bottom: 12px;
+}
+
+.na-badge-group,
+.na-card-tags {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 6px;
+	align-items: center;
+}
+
+.na-card-title {
+	font-family: var(--na-font-display);
+	font-size: 17.5px;
+	font-weight: 700;
+	letter-spacing: -0.02em;
+	color: var(--na-ink);
+	margin: 0 0 8px 0;
+	line-height: 1.35;
+	word-break: break-word;
+}
+
+.na-card-desc {
+	color: var(--na-ink-soft);
+	font-size: 13px;
+	line-height: 1.55;
+	margin: 0 0 14px 0;
+	display: -webkit-box;
+	-webkit-line-clamp: 3;
+	-webkit-box-orient: vertical;
+	overflow: hidden;
+	word-break: break-word;
+}
+
+.na-card-rejection-note {
+	margin: 8px 0 12px 0;
+	padding: 8px 12px;
+	background: rgba(255, 51, 102, 0.1);
+	border-left: 3px solid var(--na-danger);
+	border-radius: var(--na-radius-xs);
+	font-size: 12px;
+	color: var(--na-danger);
+	line-height: 1.45;
+}
+
+/* ==================================================
+   REVIEWER BOX IN CARDS
+   ================================================== */
+.na-card-reviewer-box {
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+	margin-top: 8px;
+	margin-bottom: 12px;
+	padding: 9px 12px;
+	background: var(--na-surface-card);
+	border: 1px solid var(--na-line);
+	border-radius: var(--na-radius-sm);
+}
+
+.na-card-reviewer-line {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	font-size: 12px;
+	color: var(--na-ink-soft);
+}
+
+.na-card-reviewer-icon {
+	color: var(--na-brand);
+	font-size: 14px;
+	width: 14px;
+	height: 14px;
+}
+
+.na-card-rating-line {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	font-size: 11.5px;
+	font-family: var(--na-font-mono);
+	color: var(--na-muted);
+}
+
+.na-card-rating-score {
+	color: #ffb703;
+	font-weight: 700;
+}
+
+.na-card-overall-line {
+	font-size: 10.5px;
+	font-family: var(--na-font-mono);
+	color: var(--na-muted-dim);
+}
+
+/* Tags in Cards */
+.na-tag {
+	display: inline-block;
+	padding: 2px 7px;
+	border-radius: var(--na-radius-xs);
+	background: var(--na-surface-card);
+	border: 1px solid var(--na-line);
+	color: var(--na-muted);
+	font-size: 11px;
+	font-family: var(--na-font-mono);
+}
+
+/* ==================================================
+   ENHANCED RESPONSIVE CARD METADATA (UPLOADER & DATE)
+   ================================================== */
+.na-card-meta {
+	display: flex;
+	align-items: center;
+	flex-wrap: wrap;
+	gap: 8px 14px;
+	margin-top: auto;
+	padding-top: 14px;
+	border-top: 1px solid var(--na-line);
+	font-size: 12px;
+	color: var(--na-muted);
+}
+
+.na-card-meta-item {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	white-space: nowrap; /* Prevent awkward word wraps like "Uploaded 8" and "Oct 2026" */
+	font-family: var(--na-font-mono);
+	font-size: 11.5px;
+	line-height: 1;
+}
+
+.na-card-meta-item .dashicons {
+	width: 15px;
+	height: 15px;
+	font-size: 15px;
+	color: var(--na-muted);
+	flex-shrink: 0;
+}
+
+.na-card-date {
+	color: var(--na-muted);
+}
+
+.na-card-uploader {
+	color: var(--na-ink-soft);
+}
+
+.na-card-uploader .dashicons {
+	color: var(--na-cyan);
+}
+
+.na-card-date .dashicons {
+	color: var(--na-brand);
+}
+
+/* Card Bottom Bar & Actions */
+.na-card-bottom {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 10px;
+	margin-top: 10px;
+	flex-wrap: wrap;
+}
+
+.na-card-actions {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	flex-wrap: wrap;
+	margin-left: auto;
+}
+
+.na-card-actions .na-icon-btn {
+	width: 34px;
+	height: 34px;
+}
+
+/* Like & Bookmark Active Styles */
+.na-icon-btn.liked {
+	color: var(--na-danger) !important;
+	border-color: rgba(255, 51, 102, 0.4) !important;
+	background: var(--na-danger-soft) !important;
+}
+
+.na-icon-btn.liked .dashicons {
+	color: var(--na-danger) !important;
+}
+
+.na-icon-btn.bookmarked {
+	color: var(--na-brand) !important;
+	border-color: rgba(0, 255, 102, 0.4) !important;
+	background: var(--na-brand-soft) !important;
+}
+
+.na-icon-btn .like-count {
+	font-family: var(--na-font-mono);
+	font-size: 11px;
+	margin-left: 4px;
+	font-weight: 700;
+}
+
+/* ==================================================
+   DEDICATED NOTE DETAILS FULL VIEW
+   ================================================== */
+.na-note-page {
+	width: 100%;
+}
+
+.na-note-back-nav {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+}
+
+.na-back-btn {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	font-weight: 600;
+}
+
+.na-note-layout {
+	display: grid;
+	grid-template-columns: minmax(0, 1.8fr) minmax(280px, 1fr);
+	gap: 28px;
+	margin-top: 16px;
+	align-items: start;
+}
+
+.na-document-card {
+	padding: 28px;
+	border: 1px solid var(--na-line);
+	border-radius: var(--na-radius-md);
+	background: var(--na-surface);
+	box-shadow: var(--na-shadow-sm);
+}
+
+.na-note-sidebar-card {
+	padding: 24px;
+	border: 1px solid var(--na-line);
+	border-radius: var(--na-radius-md);
+	background: var(--na-surface);
+	box-shadow: var(--na-shadow-sm);
+}
+
+.na-preview-header {
+	padding-bottom: 16px;
+	border-bottom: 1px solid var(--na-line);
+	margin-bottom: 16px;
+}
+
+.na-preview-title {
+	margin-top: 8px;
+	font-family: var(--na-font-display);
+	font-size: 24px;
+	letter-spacing: -0.02em;
+	color: var(--na-ink);
+	line-height: 1.3;
+}
+
+.na-preview-desc {
+	margin-top: 14px;
+	color: var(--na-ink-soft);
+	font-size: 14.5px;
+	line-height: 1.65;
+	white-space: pre-line;
+}
+
+.na-preview-actions {
+	margin-top: 22px;
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	flex-wrap: wrap;
+}

@@ -1,0 +1,360 @@
+/**
+ * Notes Adda - Universal Responsive Layout
+ * Adaptive rules for 1920px, 1366px, 1024px, 768px, 390px, and 320px screen widths.
+ *
+ * @package Notes_Adda
+ */
+
+/* ==================================================
+   LARGE DESKTOP (1920px and above)
+   ================================================== */
+@media (min-width: 1600px) {
+	.na-main-container {
+		max-width: 1800px;
+	}
+	.na-cards-grid {
+		grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+	}
+}
+
+/* ==================================================
+   STANDARD LAPTOPS & 1366x768 DISPLAYS (max-width: 1400px)
+   ================================================== */
+@media (max-width: 1400px) {
+	:root {
+		--na-sidebar-width: 240px;
+	}
+
+	.na-main-container {
+		padding: 0 24px 36px;
+	}
+
+	.na-cards-grid {
+		grid-template-columns: repeat(auto-fill, minmax(290px, 1fr));
+		gap: 16px;
+	}
+
+	.na-card {
+		padding: 18px;
+		min-height: 260px;
+	}
+
+	.na-card-title {
+		font-size: 16.5px;
+	}
+}
+
+/* Short height screens (e.g. 1366x768 laptops, landscape mode) */
+@media (max-height: 800px) {
+	.na-sidebar {
+		padding: 16px 14px 14px;
+	}
+
+	.na-sidebar-header {
+		padding-bottom: 12px;
+		margin-bottom: 12px;
+	}
+
+	.na-user-card {
+		padding: 8px 10px;
+		margin-bottom: 12px;
+	}
+
+	.na-sidebar-action {
+		margin-bottom: 14px;
+	}
+
+	.na-modal-body {
+		max-height: calc(90vh - 110px);
+	}
+}
+
+/* ==================================================
+   TABLET LANDSCAPE & COMPACT LAPTOPS (max-width: 1024px)
+   ================================================== */
+@media (max-width: 1024px) {
+	:root {
+		--na-sidebar-width: 220px;
+	}
+
+	.na-main-container {
+		padding: 0 20px 32px;
+	}
+
+	.na-toolbar {
+		flex-direction: column;
+		align-items: stretch;
+		gap: 12px;
+	}
+
+	.na-search-box {
+		width: 100%;
+		flex: 1 1 100%;
+	}
+
+	.na-filters-row {
+		width: 100%;
+		justify-content: flex-start;
+	}
+
+	.na-filters-row .na-select {
+		flex: 1 1 140px;
+	}
+
+	.na-note-layout {
+		grid-template-columns: 1fr;
+		gap: 20px;
+	}
+}
+
+/* ==================================================
+   TABLET PORTRAIT & MOBILE (max-width: 768px)
+   Collapsible Off-Canvas Drawer Navigation
+   ================================================== */
+@media (max-width: 768px) {
+	.na-app-layout {
+		display: block;
+		position: relative;
+	}
+
+	/* Off-Canvas Drawer Sidebar */
+	.na-sidebar {
+		position: fixed;
+		top: 0;
+		left: 0;
+		bottom: 0;
+		width: clamp(260px, 78vw, 320px);
+		height: 100vh;
+		max-height: 100vh;
+		transform: translateX(-100%);
+		box-shadow: none;
+		z-index: 1000;
+		overflow-y: auto;
+		-webkit-overflow-scrolling: touch;
+	}
+
+	.na-sidebar.na-drawer-open {
+		transform: translateX(0);
+		box-shadow: 10px 0 30px rgba(0, 0, 0, 0.85);
+	}
+
+	.na-sidebar-backdrop {
+		display: block;
+	}
+
+	.na-sidebar-backdrop.na-backdrop-active {
+		opacity: 1;
+		pointer-events: auto;
+	}
+
+	.na-sidebar-close-btn {
+		display: grid;
+		place-items: center;
+		width: 36px;
+		height: 36px;
+		min-height: 36px;
+		background: var(--na-surface-card);
+		border: 1px solid var(--na-line);
+		border-radius: var(--na-radius-xs);
+		color: var(--na-muted);
+		cursor: pointer;
+	}
+
+	/* Show Mobile Header, Hide Desktop Topbar */
+	.na-desktop-topbar {
+		display: none;
+	}
+
+	.na-mobile-header {
+		display: flex;
+	}
+
+	.na-main-container {
+		padding: 0 16px 40px;
+	}
+
+	.na-view-header {
+		flex-direction: column;
+		align-items: stretch;
+		gap: 14px;
+		margin-bottom: 20px;
+	}
+
+	.na-view-title {
+		font-size: 24px;
+	}
+
+	.na-cards-grid {
+		grid-template-columns: 1fr;
+		gap: 14px;
+	}
+
+	/* Responsive Review Cards */
+	.na-review-card {
+		flex-direction: column;
+		align-items: flex-start;
+		gap: 14px;
+		padding: 16px;
+	}
+
+	.na-review-card-actions {
+		width: 100%;
+		justify-content: flex-start;
+		padding-top: 10px;
+		border-top: 1px solid var(--na-line);
+	}
+
+	/* Responsive Admin Tables & Cards */
+	.na-users-table-wrapper {
+		display: none;
+	}
+
+	.na-users-mobile-cards {
+		display: flex;
+	}
+
+	.na-subject-requests-table {
+		display: none;
+	}
+
+	.na-subject-req-card {
+		flex-direction: column;
+		align-items: flex-start;
+		gap: 12px;
+	}
+
+	.na-subject-req-actions {
+		width: 100%;
+		justify-content: flex-start;
+		padding-top: 10px;
+		border-top: 1px solid var(--na-line);
+	}
+
+	.na-inline-form {
+		flex-direction: column;
+		align-items: stretch;
+	}
+
+	.na-form-row {
+		flex-direction: column;
+		gap: 12px;
+	}
+}
+
+/* ==================================================
+   MOBILE PHONES (max-width: 480px)
+   Touch Friendly Tap Targets (~44px) & Full-Width Actions
+   ================================================== */
+@media (max-width: 480px) {
+	.na-btn {
+		min-height: 44px; /* Touch-friendly tap target */
+		padding: 11px 16px;
+	}
+
+	.na-icon-btn {
+		width: 42px;
+		height: 42px;
+		min-height: 42px;
+	}
+
+	.na-toolbar {
+		padding: 12px;
+	}
+
+	.na-filters-row {
+		display: flex;
+		flex-direction: column;
+		width: 100%;
+		gap: 8px;
+	}
+
+	.na-filters-row .na-select,
+	.na-filters-row .na-btn {
+		width: 100%;
+	}
+
+	.na-card {
+		padding: 16px;
+	}
+
+	.na-card-bottom {
+		flex-direction: column;
+		align-items: stretch;
+		gap: 10px;
+	}
+
+	.na-card-actions {
+		width: 100%;
+		justify-content: flex-start;
+		margin-left: 0;
+	}
+
+	/* Modal Mobile Layout: Stack Buttons with Full Width */
+	.na-modal-dialog {
+		margin: 10px auto;
+		border-radius: var(--na-radius-md);
+	}
+
+	.na-modal-header {
+		padding: 14px 16px;
+	}
+
+	.na-modal-body {
+		padding: 16px;
+	}
+
+	.na-modal-footer {
+		flex-direction: column-reverse;
+		gap: 10px;
+		padding-top: 14px;
+	}
+
+	.na-modal-footer .na-btn,
+	.na-modal-footer .na-modal-close-btn,
+	.na-modal-cancel-btn {
+		width: 100% !important;
+		min-height: 44px !important;
+		justify-content: center !important;
+	}
+
+	/* Notifications Dropdown Full Width */
+	.na-notifications-dropdown {
+		position: fixed;
+		top: 60px;
+		left: 12px;
+		right: 12px;
+		width: auto;
+		max-height: calc(100vh - 80px);
+	}
+}
+
+/* ==================================================
+   NARROW PHONES (320px - 360px)
+   Zero Overflow, Compact Spacing
+   ================================================== */
+@media (max-width: 360px) {
+	.na-main-container {
+		padding: 0 10px 32px;
+	}
+
+	.na-view-title {
+		font-size: 21px;
+	}
+
+	.na-card-meta {
+		gap: 6px;
+	}
+
+	.na-card-meta-item {
+		font-size: 11px;
+	}
+
+	.na-tab-btn {
+		padding: 7px 10px;
+		font-size: 12px;
+	}
+
+	.na-modal-dialog {
+		margin: 4px;
+	}
+}

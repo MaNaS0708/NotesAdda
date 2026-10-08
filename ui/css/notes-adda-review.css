@@ -1,0 +1,177 @@
+/**
+ * Notes Adda - Review Queue & Expert Ratings
+ * Quality verification workflow, moderation decision forms, and quarter-star rating controls.
+ *
+ * @package Notes_Adda
+ */
+
+/* ==================================================
+   REVIEW FILTER TABS
+   ================================================== */
+.na-review-filter-tabs {
+	display: flex;
+	gap: 8px;
+	margin-bottom: 20px;
+	flex-wrap: wrap;
+}
+
+.na-tab-btn {
+	display: inline-flex;
+	align-items: center;
+	gap: 7px;
+	padding: 9px 16px;
+	border: 1px solid var(--na-line);
+	border-radius: var(--na-radius-sm);
+	background: var(--na-surface-card);
+	color: var(--na-muted);
+	font-size: 13px;
+	font-weight: 600;
+	cursor: pointer;
+	transition: all var(--na-transition);
+}
+
+.na-tab-btn:hover {
+	color: var(--na-ink);
+	border-color: var(--na-line-strong);
+}
+
+.na-tab-btn.active {
+	background: var(--na-brand-soft);
+	border-color: rgba(0, 255, 102, 0.4);
+	color: var(--na-brand);
+}
+
+/* ==================================================
+   REVIEW QUEUE CARDS
+   ================================================== */
+.na-review-list {
+	display: grid;
+	gap: 16px;
+}
+
+.na-review-card {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 20px;
+	padding: 20px 24px;
+	border: 1px solid var(--na-line);
+	border-radius: var(--na-radius-md);
+	background: var(--na-surface);
+	box-shadow: var(--na-shadow-sm);
+	transition: all var(--na-transition);
+}
+
+.na-review-card:hover {
+	border-color: var(--na-line-strong);
+	background: var(--na-surface-card);
+}
+
+.na-review-card-info {
+	flex: 1;
+	min-width: 0;
+}
+
+.na-review-card-top {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	margin-bottom: 8px;
+	flex-wrap: wrap;
+}
+
+.na-review-card-title {
+	font-family: var(--na-font-display);
+	font-size: 16.5px;
+	font-weight: 700;
+	color: var(--na-ink);
+	margin: 0 0 6px 0;
+}
+
+.na-review-card-meta {
+	display: flex;
+	align-items: center;
+	gap: 12px;
+	font-size: 12px;
+	color: var(--na-muted);
+	font-family: var(--na-font-mono);
+	flex-wrap: wrap;
+}
+
+.na-review-card-actions {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	flex-shrink: 0;
+	flex-wrap: wrap;
+}
+
+/* ==================================================
+   REVIEW DECISION PREVIEW IN MODAL
+   ================================================== */
+.na-review-meta-preview {
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+	padding: 12px 16px;
+	border-radius: var(--na-radius-sm);
+	background: var(--na-surface-card);
+	border: 1px solid var(--na-line);
+	font-size: 13px;
+}
+
+.na-review-meta-item {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+}
+
+.na-review-meta-label {
+	color: var(--na-muted);
+	font-weight: 500;
+}
+
+.na-review-meta-val {
+	color: var(--na-ink);
+	font-weight: 600;
+}
+
+/* ==================================================
+   EXPERT RATINGS (QUARTER STAR CONTROLS)
+   ================================================== */
+.na-expert-rating-section {
+	margin-top: 16px;
+	padding: 14px 18px;
+	border-radius: var(--na-radius-sm);
+	background: var(--na-surface-card);
+	border: 1px solid var(--na-line);
+}
+
+.na-expert-rating-box {
+	display: flex;
+	align-items: center;
+	gap: 12px;
+	flex-wrap: wrap;
+}
+
+.na-quarter-stars {
+	display: inline-flex;
+	align-items: center;
+	gap: 3px;
+}
+
+.na-quarter-star-svg {
+	cursor: pointer;
+	transition: transform 0.12s ease;
+}
+
+.na-quarter-star-svg:hover {
+	transform: scale(1.15);
+}
+
+.na-rating-val-display {
+	font-family: var(--na-font-mono);
+	font-size: 13px;
+	font-weight: 700;
+	color: #ffb703;
+}

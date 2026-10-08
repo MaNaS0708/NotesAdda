@@ -1,0 +1,445 @@
+/**
+ * Notes Adda - Layout Styles
+ * Shell layout, sticky sidebar, responsive navigation drawer, desktop topbar, and mobile header.
+ *
+ * @package Notes_Adda
+ */
+
+/* Main Layout Shell */
+.na-app-layout {
+	display: flex;
+	min-height: 100vh;
+	background: var(--na-canvas);
+	position: relative;
+	width: 100%;
+}
+
+/* Sidebar Shell */
+.na-sidebar {
+	display: flex;
+	position: sticky;
+	top: 0;
+	width: var(--na-sidebar-width);
+	height: 100vh;
+	max-height: 100vh;
+	flex-direction: column;
+	padding: 24px 18px 20px;
+	border-right: 1px solid var(--na-line);
+	background: var(--na-surface);
+	backdrop-filter: blur(16px);
+	z-index: 100;
+	flex-shrink: 0;
+	transition: transform var(--na-transition), width var(--na-transition);
+}
+
+.na-sidebar-header {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	padding: 4px 6px 20px;
+	border-bottom: 1px solid var(--na-line);
+	margin-bottom: 16px;
+	flex-shrink: 0;
+}
+
+.na-sidebar-brand-link {
+	display: flex;
+	align-items: center;
+	min-width: 0;
+	overflow: hidden;
+	text-decoration: none;
+}
+
+.na-sidebar-brand-logo {
+	display: block;
+	width: auto;
+	height: 42px;
+	max-width: 215px;
+	object-fit: contain;
+}
+
+.na-sidebar-close-btn {
+	display: none;
+}
+
+.na-sidebar-backdrop {
+	display: none;
+	position: fixed;
+	inset: 0;
+	background: rgba(4, 7, 12, 0.75);
+	backdrop-filter: blur(6px);
+	z-index: 99;
+	opacity: 0;
+	pointer-events: none;
+	transition: opacity var(--na-transition);
+}
+
+/* User Profile Card */
+.na-user-card {
+	display: flex;
+	align-items: center;
+	gap: 12px;
+	margin: 0 0 18px;
+	padding: 12px;
+	border: 1px solid var(--na-line);
+	border-radius: var(--na-radius-md);
+	background: var(--na-surface-card);
+	flex-shrink: 0;
+}
+
+.na-user-avatar {
+	flex-shrink: 0;
+}
+
+.na-user-avatar img {
+	display: block;
+	width: 40px;
+	height: 40px;
+	border-radius: 50%;
+	border: 1px solid var(--na-line-strong);
+	object-fit: cover;
+}
+
+.na-user-details {
+	display: grid;
+	min-width: 0;
+	gap: 2px;
+	flex: 1;
+}
+
+.na-user-name {
+	font-size: 13.5px;
+	font-weight: 700;
+	color: var(--na-ink);
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.na-user-handle {
+	color: var(--na-muted);
+	font-size: 11.5px;
+	font-family: var(--na-font-mono);
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.na-user-meta-row {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	flex-wrap: wrap;
+	margin-top: 2px;
+}
+
+/* Sidebar Primary Upload Action */
+.na-sidebar-action {
+	margin-bottom: 20px;
+	flex-shrink: 0;
+}
+
+/* Sidebar Navigation Items */
+.na-sidebar-nav {
+	flex: 1 1 auto;
+	overflow-y: auto;
+	overflow-x: hidden;
+	padding-right: 4px;
+	scrollbar-width: thin;
+	scrollbar-color: var(--na-line-strong) transparent;
+}
+
+.na-sidebar-nav::-webkit-scrollbar {
+	width: 5px;
+}
+.na-sidebar-nav::-webkit-scrollbar-thumb {
+	background: var(--na-line-strong);
+	border-radius: 4px;
+}
+
+.na-nav-label {
+	padding: 0 10px 8px;
+	color: var(--na-muted-dim);
+	font-size: 10.5px;
+	font-family: var(--na-font-mono);
+	font-weight: 700;
+	letter-spacing: 0.1em;
+	text-transform: uppercase;
+}
+
+.na-nav-list {
+	display: grid;
+	gap: 4px;
+	list-style: none;
+	padding: 0;
+	margin: 0;
+}
+
+.na-nav-item {
+	display: flex;
+	align-items: center;
+	gap: 12px;
+	padding: 10px 14px;
+	border: 1px solid transparent;
+	border-radius: var(--na-radius-sm);
+	color: var(--na-ink-soft);
+	font-weight: 500;
+	font-size: 13.5px;
+	text-decoration: none;
+	transition: all var(--na-transition);
+	position: relative;
+}
+
+.na-nav-item .dashicons,
+.na-nav-item .na-nav-icon {
+	color: var(--na-muted);
+	font-size: 18px;
+	width: 18px;
+	height: 18px;
+	flex-shrink: 0;
+	transition: color var(--na-transition);
+}
+
+.na-nav-item .na-svg-nav {
+	display: block;
+	transition: stroke var(--na-transition);
+}
+
+.na-nav-text {
+	flex: 1;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
+.na-nav-item:hover {
+	background: var(--na-surface-card);
+	border-color: var(--na-line);
+	color: var(--na-ink);
+}
+
+.na-nav-item:hover .dashicons,
+.na-nav-item:hover .na-svg-nav {
+	color: var(--na-brand);
+	stroke: var(--na-brand);
+}
+
+.na-nav-item.active {
+	background: var(--na-brand-soft);
+	border-color: rgba(0, 255, 102, 0.35);
+	color: var(--na-brand);
+	font-weight: 600;
+	box-shadow: inset 0 0 12px rgba(0, 255, 102, 0.08);
+}
+
+.na-nav-item.active .dashicons {
+	color: var(--na-brand);
+}
+
+.na-nav-item.active .na-svg-nav {
+	stroke: var(--na-brand);
+}
+
+/* Sidebar Counter Badge */
+.na-nav-counter-badge {
+	margin-left: auto;
+	font-family: var(--na-font-mono);
+	font-size: 11px;
+	font-weight: 700;
+	padding: 2px 7px;
+	border-radius: 12px;
+	background: var(--na-surface-elevated);
+	color: var(--na-muted);
+	border: 1px solid var(--na-line);
+	line-height: 1.2;
+}
+
+.na-badge-danger {
+	background: var(--na-danger-soft) !important;
+	color: var(--na-danger) !important;
+	border-color: rgba(255, 51, 102, 0.4) !important;
+}
+
+/* Sidebar Footer & Logout */
+.na-sidebar-footer {
+	margin-top: auto;
+	padding-top: 14px;
+	border-top: 1px solid var(--na-line);
+	flex-shrink: 0;
+}
+
+.na-logout-btn {
+	display: flex;
+	width: 100%;
+	align-items: center;
+	gap: 10px;
+	padding: 10px 14px;
+	border: 1px solid transparent;
+	border-radius: var(--na-radius-sm);
+	background: transparent;
+	color: var(--na-muted);
+	font-size: 13px;
+	font-weight: 500;
+	cursor: pointer;
+	transition: all var(--na-transition);
+}
+
+.na-logout-btn:hover {
+	background: var(--na-danger-soft);
+	border-color: rgba(255, 51, 102, 0.3);
+	color: var(--na-danger);
+}
+
+.na-logout-btn .dashicons {
+	font-size: 17px;
+	width: 17px;
+	height: 17px;
+}
+
+/* Main Content Area */
+.na-main-container {
+	flex: 1 1 auto;
+	min-width: 0;
+	margin: 0;
+	padding: 0 clamp(18px, 3vw, 48px) 48px;
+	position: relative;
+	z-index: 1;
+	overflow-y: visible;
+}
+
+/* Desktop Top Bar */
+.na-desktop-topbar {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	height: 64px;
+	margin-bottom: 24px;
+	border-bottom: 1px solid var(--na-line);
+	position: relative;
+	z-index: 20;
+}
+
+.na-topbar-breadcrumb {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	font-family: var(--na-font-mono);
+	font-size: 11.5px;
+	color: var(--na-muted);
+	letter-spacing: 0.05em;
+	text-transform: uppercase;
+}
+
+.na-topbar-pulse {
+	width: 8px;
+	height: 8px;
+	border-radius: 50%;
+	background: var(--na-brand);
+	box-shadow: 0 0 10px var(--na-brand);
+	animation: na-pulse 2s infinite ease-in-out;
+}
+
+.na-topbar-actions {
+	display: flex;
+	align-items: center;
+	gap: 14px;
+}
+
+/* Mobile Header */
+.na-mobile-header {
+	display: none;
+	align-items: center;
+	justify-content: space-between;
+	gap: 12px;
+	padding: 14px 0;
+	margin-bottom: 20px;
+	border-bottom: 1px solid var(--na-line);
+	position: relative;
+	z-index: 50;
+}
+
+.na-mobile-header-left {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+}
+
+.na-drawer-toggle-btn {
+	background: var(--na-surface-card);
+	border: 1px solid var(--na-line);
+	color: var(--na-ink);
+	width: 40px;
+	height: 40px;
+	border-radius: var(--na-radius-sm);
+	cursor: pointer;
+}
+
+.na-mobile-brand-link {
+	display: flex;
+	align-items: center;
+	text-decoration: none;
+}
+
+.na-mobile-brand-logo {
+	display: block;
+	max-height: 28px;
+	width: auto;
+	max-width: 150px;
+	object-fit: contain;
+}
+
+.na-mobile-actions {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+}
+
+/* Views & Containers */
+.na-view {
+	width: 100%;
+}
+
+.na-view.active {
+	animation: na-fade-in 0.22s ease;
+}
+
+/* View Header */
+.na-view-header {
+	display: flex;
+	align-items: flex-start;
+	justify-content: space-between;
+	gap: 20px;
+	margin-bottom: 28px;
+	flex-wrap: wrap;
+}
+
+.na-eyebrow {
+	display: inline-block;
+	margin-bottom: 6px;
+	color: var(--na-brand);
+	font-family: var(--na-font-mono);
+	font-size: 11px;
+	font-weight: 700;
+	letter-spacing: 0.12em;
+	text-transform: uppercase;
+}
+
+.na-view-title {
+	max-width: 780px;
+	color: var(--na-ink);
+	font-family: var(--na-font-display);
+	font-size: clamp(24px, 2.5vw, 34px);
+	font-weight: 750;
+	letter-spacing: -0.03em;
+	line-height: 1.2;
+	margin: 0;
+}
+
+.na-view-subtitle {
+	max-width: 680px;
+	margin-top: 8px;
+	margin-bottom: 0;
+	color: var(--na-ink-soft);
+	font-size: 14.5px;
+	line-height: 1.6;
+}

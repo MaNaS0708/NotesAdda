@@ -203,20 +203,17 @@ class Notes_Adda_Frontend {
 				array(),
 				null
 			);
-			wp_enqueue_style(
-				'notes-adda-app-style',
-				NOTES_ADDA_URL . 'ui/css/notes-adda-app.css',
-				array(),
-				NOTES_ADDA_VERSION
-			);
+			wp_enqueue_style( 'dashicons' );
 
-			wp_enqueue_script(
-				'notes-adda-app-script',
-				NOTES_ADDA_URL . 'ui/js/notes-adda-app.js',
-				array( 'jquery' ),
-				NOTES_ADDA_VERSION,
-				true
-			);
+			// Modular Stylesheets
+			wp_enqueue_style( 'notes-adda-base-style', NOTES_ADDA_URL . 'ui/css/notes-adda-base.css', array(), NOTES_ADDA_VERSION );
+			wp_enqueue_style( 'notes-adda-layout-style', NOTES_ADDA_URL . 'ui/css/notes-adda-layout.css', array( 'notes-adda-base-style' ), NOTES_ADDA_VERSION );
+			wp_enqueue_style( 'notes-adda-components-style', NOTES_ADDA_URL . 'ui/css/notes-adda-components.css', array( 'notes-adda-layout-style' ), NOTES_ADDA_VERSION );
+			wp_enqueue_style( 'notes-adda-library-style', NOTES_ADDA_URL . 'ui/css/notes-adda-library.css', array( 'notes-adda-components-style' ), NOTES_ADDA_VERSION );
+			wp_enqueue_style( 'notes-adda-modals-style', NOTES_ADDA_URL . 'ui/css/notes-adda-modals.css', array( 'notes-adda-components-style' ), NOTES_ADDA_VERSION );
+			wp_enqueue_style( 'notes-adda-review-style', NOTES_ADDA_URL . 'ui/css/notes-adda-review.css', array( 'notes-adda-components-style' ), NOTES_ADDA_VERSION );
+			wp_enqueue_style( 'notes-adda-admin-style', NOTES_ADDA_URL . 'ui/css/notes-adda-admin.css', array( 'notes-adda-components-style' ), NOTES_ADDA_VERSION );
+			wp_enqueue_style( 'notes-adda-responsive-style', NOTES_ADDA_URL . 'ui/css/notes-adda-responsive.css', array( 'notes-adda-admin-style', 'notes-adda-library-style' ), NOTES_ADDA_VERSION );
 
 			// Fetch current user details and capabilities
 			$current_user = wp_get_current_user();
@@ -245,35 +242,71 @@ class Notes_Adda_Frontend {
 				$role_label = 'Expert';
 			}
 
-			wp_localize_script(
-				'notes-adda-app-script',
-				'NotesAdda',
-				array(
-					'ajax_url'             => admin_url( 'admin-ajax.php' ),
-					'nonce'                => wp_create_nonce( 'notes_adda_ajax_nonce' ),
-					'is_logged_in'         => $is_logged_in,
-					'is_owner'             => $is_owner,
-					'user_id'              => $is_logged_in ? $current_user->ID : 0,
-					'user_name'            => $is_logged_in ? $current_user->display_name : '',
-					'user_login'           => $is_logged_in ? $current_user->user_login : '',
-					'user_role'            => $app_role,
-					'role_label'           => $role_label,
-					'can_upload'           => $can_upload,
-					'can_review'           => $can_review,
-					'can_request_subjects' => $can_request_subjects,
-					'can_manage_subjects'  => $can_manage_subjects,
-					'can_manage_users'     => $can_manage_users,
-					'can_manage_all_notes' => $can_manage_all,
-					'login_url'            => wp_login_url( get_permalink() ),
-					'app_url'              => self::get_app_url(),
-					'landing_url'          => self::get_landing_url(),
-					'logo_icon'            => NOTES_ADDA_URL . 'ui/assets/images/logo_wui.png',
-					'logo_name'            => NOTES_ADDA_URL . 'ui/assets/images/logoname.png',
-				)
+			// Core Shared Module
+			wp_enqueue_script(
+				'notes-adda-common',
+				NOTES_ADDA_URL . 'ui/js/notes-adda-common.js',
+				array( 'jquery' ),
+				NOTES_ADDA_VERSION,
+				true
 			);
 
-			// Enqueue Dashicons
-			wp_enqueue_style( 'dashicons' );
+			$localized_data = array(
+				'ajax_url'             => admin_url( 'admin-ajax.php' ),
+				'nonce'                => wp_create_nonce( 'notes_adda_ajax_nonce' ),
+				'is_logged_in'         => $is_logged_in,
+				'is_owner'             => $is_owner,
+				'user_id'              => $is_logged_in ? $current_user->ID : 0,
+				'user_name'            => $is_logged_in ? $current_user->display_name : '',
+				'user_login'           => $is_logged_in ? $current_user->user_login : '',
+				'user_role'            => $app_role,
+				'role_label'           => $role_label,
+				'can_upload'           => $can_upload,
+				'can_review'           => $can_review,
+				'can_request_subjects' => $can_request_subjects,
+				'can_manage_subjects'  => $can_manage_subjects,
+				'can_manage_users'     => $can_manage_users,
+				'can_manage_all_notes' => $can_manage_all,
+				'login_url'            => wp_login_url( get_permalink() ),
+				'app_url'              => self::get_app_url(),
+				'landing_url'          => self::get_landing_url(),
+				'logo_icon'            => NOTES_ADDA_URL . 'ui/assets/images/logo_wui.png',
+				'logo_name'            => NOTES_ADDA_URL . 'ui/assets/images/logoname.png',
+			);
+
+			wp_localize_script( 'notes-adda-common', 'NotesAdda', $localized_data );
+
+			// Page & Feature Modules
+			wp_enqueue_script( 'notes-adda-auth', NOTES_ADDA_URL . 'ui/js/notes-adda-auth.js', array( 'notes-adda-common' ), NOTES_ADDA_VERSION, true );
+			wp_enqueue_script( 'notes-adda-notifications', NOTES_ADDA_URL . 'ui/js/notes-adda-notifications.js', array( 'notes-adda-common' ), NOTES_ADDA_VERSION, true );
+			wp_enqueue_script( 'notes-adda-expert-ratings', NOTES_ADDA_URL . 'ui/js/notes-adda-expert-ratings.js', array( 'notes-adda-common' ), NOTES_ADDA_VERSION, true );
+			wp_enqueue_script( 'notes-adda-library', NOTES_ADDA_URL . 'ui/js/notes-adda-library.js', array( 'notes-adda-common', 'notes-adda-expert-ratings' ), NOTES_ADDA_VERSION, true );
+			wp_enqueue_script( 'notes-adda-my-notes', NOTES_ADDA_URL . 'ui/js/notes-adda-my-notes.js', array( 'notes-adda-common', 'notes-adda-library' ), NOTES_ADDA_VERSION, true );
+			wp_enqueue_script( 'notes-adda-bookmarks', NOTES_ADDA_URL . 'ui/js/notes-adda-bookmarks.js', array( 'notes-adda-common', 'notes-adda-library' ), NOTES_ADDA_VERSION, true );
+			wp_enqueue_script( 'notes-adda-note-detail', NOTES_ADDA_URL . 'ui/js/notes-adda-note-detail.js', array( 'notes-adda-common', 'notes-adda-expert-ratings' ), NOTES_ADDA_VERSION, true );
+			wp_enqueue_script( 'notes-adda-upload-modal', NOTES_ADDA_URL . 'ui/js/notes-adda-upload-modal.js', array( 'notes-adda-common' ), NOTES_ADDA_VERSION, true );
+
+			// Conditional Modules (Only load when permitted)
+			if ( $can_request_subjects || $can_manage_subjects ) {
+				wp_enqueue_script( 'notes-adda-subject-requests', NOTES_ADDA_URL . 'ui/js/notes-adda-subject-requests.js', array( 'notes-adda-common' ), NOTES_ADDA_VERSION, true );
+			}
+
+			if ( $can_review ) {
+				wp_enqueue_script( 'notes-adda-review-queue', NOTES_ADDA_URL . 'ui/js/notes-adda-review-queue.js', array( 'notes-adda-common' ), NOTES_ADDA_VERSION, true );
+			}
+
+			if ( $can_manage_subjects ) {
+				wp_enqueue_script( 'notes-adda-subject-management', NOTES_ADDA_URL . 'ui/js/notes-adda-subject-management.js', array( 'notes-adda-common' ), NOTES_ADDA_VERSION, true );
+			}
+
+			if ( $can_manage_users ) {
+				wp_enqueue_script( 'notes-adda-user-management', NOTES_ADDA_URL . 'ui/js/notes-adda-user-management.js', array( 'notes-adda-common' ), NOTES_ADDA_VERSION, true );
+			}
+
+			// Backwards compatibility handles for any external integrations
+			wp_register_script( 'notes-adda-app-script', false, array( 'notes-adda-common' ), NOTES_ADDA_VERSION, true );
+			wp_enqueue_script( 'notes-adda-app-script' );
+			wp_localize_script( 'notes-adda-app-script', 'NotesAdda', $localized_data );
 		}
 	}
 

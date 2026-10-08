@@ -1,0 +1,164 @@
+/**
+ * Notes Adda - Base Styles & Design Tokens
+ * Variables, typography, resets, accessibility, and utility animations.
+ *
+ * @package Notes_Adda
+ */
+
+:root {
+	/* Cyber Terminal Canvas & Surfaces */
+	--na-canvas: #06090e;
+	--na-canvas-subtle: #0a0e16;
+	--na-surface: #0e141f;
+	--na-surface-card: #121927;
+	--na-surface-subtle: #151d2d;
+	--na-surface-elevated: #182235;
+
+	/* Technical Grid Borders */
+	--na-line: #1b2434;
+	--na-line-strong: #273449;
+	--na-line-glow: rgba(0, 255, 102, 0.25);
+
+	/* Neon Lime Accent (High-contrast, non-yellow) */
+	--na-brand: #00ff66;
+	--na-brand-hover: #33ff85;
+	--na-brand-active: #00d957;
+	--na-brand-soft: rgba(0, 255, 102, 0.12);
+	--na-brand-glow: 0 0 15px rgba(0, 255, 102, 0.35);
+	--na-brand-glow-lg: 0 0 25px rgba(0, 255, 102, 0.5);
+
+	/* Text & Readability (Clean high-contrast white) */
+	--na-ink: #f0f6fc;
+	--na-ink-soft: #c9d1d9;
+	--na-muted: #8b949e;
+	--na-muted-dim: #6e7681;
+
+	/* Cyber Status Colors */
+	--na-success: #00ff66;
+	--na-success-soft: rgba(0, 255, 102, 0.12);
+	--na-danger: #ff3366;
+	--na-danger-soft: rgba(255, 51, 102, 0.14);
+	--na-warning: #ffaa00;
+	--na-warning-soft: rgba(255, 170, 0, 0.14);
+	--na-cyan: #00e5ff;
+	--na-cyan-soft: rgba(0, 229, 255, 0.12);
+
+	/* Radii & HUD Panels */
+	--na-radius-xs: 4px;
+	--na-radius-sm: 8px;
+	--na-radius-md: 12px;
+	--na-radius-lg: 16px;
+	--na-radius-xl: 20px;
+	--na-shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.45);
+	--na-shadow-md: 0 10px 30px rgba(0, 0, 0, 0.65);
+	--na-shadow-lg: 0 18px 48px rgba(0, 0, 0, 0.8);
+	--na-shadow-glow: 0 0 20px rgba(0, 255, 102, 0.25);
+
+	/* Typography */
+	--na-font-sans: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+	--na-font-display: 'Space Grotesk', 'Inter', -apple-system, sans-serif;
+	--na-font-mono: 'JetBrains Mono', 'SF Mono', Consolas, monospace;
+	--na-sidebar-width: clamp(230px, 18vw, 272px);
+	--na-transition: 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Reset and Container */
+#notes-adda-app,
+#notes-adda-app * {
+	box-sizing: border-box;
+}
+
+#notes-adda-app {
+	min-height: 100vh;
+	background: var(--na-canvas);
+	color: var(--na-ink);
+	font-family: var(--na-font-sans);
+	font-size: 14.5px;
+	line-height: 1.5;
+	-webkit-font-smoothing: antialiased;
+	-moz-osx-font-smoothing: grayscale;
+	position: relative;
+	overflow-x: hidden;
+}
+
+/* Base Headings & Elements */
+#notes-adda-app h1,
+#notes-adda-app h2,
+#notes-adda-app h3,
+#notes-adda-app h4,
+#notes-adda-app h5,
+#notes-adda-app h6 {
+	color: var(--na-ink);
+	font-family: var(--na-font-display);
+	margin-top: 0;
+	letter-spacing: -0.02em;
+}
+
+#notes-adda-app p {
+	margin-top: 0;
+	margin-bottom: 1em;
+}
+
+#notes-adda-app a {
+	color: var(--na-brand);
+	text-decoration: none;
+	transition: color var(--na-transition);
+}
+
+#notes-adda-app a:hover {
+	color: var(--na-brand-hover);
+}
+
+/* Dashicons Alignment Helper */
+#notes-adda-app .dashicons {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	vertical-align: middle;
+	line-height: 1;
+}
+
+/* Dashicons Bookmark Fallback */
+.dashicons.dashicons-bookmark,
+.dashicons-bookmark {
+	position: relative;
+}
+
+.dashicons.dashicons-bookmark::before,
+.dashicons-bookmark::before {
+	content: "\f147";
+}
+
+/* Animations */
+@keyframes na-spin {
+	from { transform: rotate(0deg); }
+	to { transform: rotate(360deg); }
+}
+
+.na-spin {
+	animation: na-spin 1s linear infinite;
+	display: inline-block;
+}
+
+@keyframes na-fade-in {
+	from { opacity: 0; transform: translateY(6px); }
+	to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes na-pulse {
+	0%, 100% { opacity: 1; transform: scale(1); }
+	50% { opacity: 0.4; transform: scale(0.9); }
+}
+
+/* Screen Reader Only Utility */
+.na-sr-only {
+	position: absolute;
+	width: 1px;
+	height: 1px;
+	padding: 0;
+	margin: -1px;
+	overflow: hidden;
+	clip: rect(0, 0, 0, 0);
+	white-space: nowrap;
+	border: 0;
+}
