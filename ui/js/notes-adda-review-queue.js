@@ -93,12 +93,15 @@
 			$container.empty();
 			$pagination.empty();
 
+			const currentStatus = app.reviewFilter || 'pending';
 			const params = {
 				action: 'notes_adda_query_notes',
 				_ajax_nonce: NotesAdda.nonce,
 				page: app.currentPage,
 				per_page: 10,
-				status: app.reviewFilter || 'pending'
+				is_review_queue: 1,
+				review_status: currentStatus,
+				status: currentStatus
 			};
 
 			$.get(NotesAdda.ajax_url, params, function(res) {
@@ -108,9 +111,28 @@
 					const total = parseInt(res.data.total, 10) || 0;
 					const totalPages = parseInt(res.data.total_pages, 10) || 1;
 
-					$summary.text(`Found ${total} submission${total === 1 ? '' : 's'} (${app.reviewFilter})`);
+					let statusLabel = 'pending';
+					if (currentStatus === 'verified') statusLabel = 'verified';
+					else if (currentStatus === 'rejected') statusLabel = 'rejected';
+					else if (currentStatus === 'all') statusLabel = 'all';
+
+					$summary.text(`Found ${total} submission${total === 1 ? '' : 's'} (${statusLabel})`);
 
 					if (items.length === 0) {
+						let emptyTitle = 'Queue is clear!';
+						let emptyDesc = 'There are no unverified notes awaiting review right now.';
+						if (currentStatus === 'rejected') {
+							emptyTitle = 'No rejected notes';
+							emptyDesc = 'There are no rejected notes in the review queue.';
+						} else if (currentStatus === 'verified') {
+							emptyTitle = 'No verified notes';
+							emptyDesc = 'There are no verified notes matching this filter.';
+						} else if (currentStatus === 'all') {
+							emptyTitle = 'No notes found';
+							emptyDesc = 'No submissions found in the review queue.';
+						}
+						$empty.find('.na-state-title').text(emptyTitle);
+						$empty.find('.na-state-desc').text(emptyDesc);
 						$empty.show();
 					} else {
 						self.renderQueue(items, $container);
@@ -141,6 +163,7 @@
 				const isPending = (note.review_status === 'pending');
 				const isVerified = (note.review_status === 'verified');
 				const isRejected = (note.review_status === 'rejected');
+				const isSelfOwner = (parseInt(note.owner_id, 10) === parseInt(NotesAdda.user_id, 10));
 
 				let badgeHtml = '';
 				if (isVerified) {
@@ -178,12 +201,16 @@
 									<span class="dashicons dashicons-pdf"></span> <span>View PDF</span>
 								</a>
 							` : ''}
-							<button type="button" class="na-btn na-btn-primary na-btn-sm na-btn-verify-note" data-id="${note.id}" data-title="${app.escapeHtml(note.title)}">
-								<span class="dashicons dashicons-yes-alt"></span> <span>Verify</span>
-							</button>
-							<button type="button" class="na-btn na-btn-danger na-btn-sm na-btn-reject-note" data-id="${note.id}" data-title="${app.escapeHtml(note.title)}">
-								<span class="dashicons dashicons-dismiss"></span> <span>Reject</span>
-							</button>
+							${isSelfOwner ? `
+								<span class="na-form-hint" style="align-self:center;">(Your submission)</span>
+							` : `
+								<button type="button" class="na-btn na-btn-primary na-btn-sm na-btn-verify-note" data-id="${note.id}" data-title="${app.escapeHtml(note.title)}" ${isVerified ? 'title="Already verified"' : ''}>
+									<span class="dashicons dashicons-yes-alt"></span> <span>${isVerified ? 'Verified' : 'Verify'}</span>
+								</button>
+								<button type="button" class="na-btn na-btn-danger na-btn-sm na-btn-reject-note" data-id="${note.id}" data-title="${app.escapeHtml(note.title)}" ${isRejected ? 'title="Already rejected"' : ''}>
+									<span class="dashicons dashicons-dismiss"></span> <span>${isRejected ? 'Rejected' : 'Reject'}</span>
+								</button>
+							`}
 						</div>
 					</div>
 				`;

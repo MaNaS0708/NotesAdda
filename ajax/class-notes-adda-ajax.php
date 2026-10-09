@@ -142,13 +142,35 @@ class Notes_Adda_Ajax {
 
 		$allowed_filters = array(
 			'search', 'owner_id', 'tag_id', 'tag_slug', 'subject', 'is_whole_notes',
-			'review_status', 'is_review_queue', 'page', 'per_page', 'orderby', 'order'
+			'review_status', 'status', 'is_review_queue', 'page', 'per_page', 'orderby', 'order'
 		);
 
 		foreach ( $allowed_filters as $filter ) {
 			if ( isset( $_REQUEST[ $filter ] ) ) {
 				$args[ $filter ] = sanitize_text_field( wp_unslash( $_REQUEST[ $filter ] ) );
 			}
+		}
+
+		// Support 'status' as alias for 'review_status' if not explicitly provided
+		if ( isset( $args['status'] ) && ! isset( $args['review_status'] ) ) {
+			$args['review_status'] = $args['status'];
+		}
+
+		// Handle sort shortcut (e.g. 'recent', 'popular')
+		if ( isset( $_REQUEST['sort'] ) ) {
+			$sort = sanitize_key( wp_unslash( $_REQUEST['sort'] ) );
+			if ( 'popular' === $sort ) {
+				$args['orderby'] = 'like_count';
+				$args['order']   = 'DESC';
+			} elseif ( 'recent' === $sort ) {
+				$args['orderby'] = 'created_at';
+				$args['order']   = 'DESC';
+			}
+		}
+
+		// Handle bookmarked_only filter
+		if ( ! empty( $_REQUEST['bookmarked_only'] ) && is_user_logged_in() ) {
+			$args['bookmarked_by'] = get_current_user_id();
 		}
 
 		$result = Notes_Adda_Note_Query::get_notes( $args );
@@ -393,7 +415,8 @@ class Notes_Adda_Ajax {
 			self::send_error( new WP_Error( 'notes_adda_forbidden', 'Only Notes Adda Admins can view subject requests.' ) );
 		}
 
-		$requests = Notes_Adda_Subject_Requests::get_all_requests();
+		$status   = isset( $_REQUEST['status'] ) ? sanitize_key( wp_unslash( $_REQUEST['status'] ) ) : 'pending';
+		$requests = Notes_Adda_Subject_Requests::get_all_requests( $status );
 		wp_send_json_success( $requests );
 	}
 
@@ -558,6 +581,20 @@ class Notes_Adda_Ajax {
 
 		$user_list = array();
 		if ( ! empty( $users ) ) {
+			global $wpdb;
+			$notes_table = $wpdb->prefix . 'notes_adda_notes';
+			$user_ids    = wp_list_pluck( $users, 'ID' );
+			$note_counts = array();
+			if ( ! empty( $user_ids ) ) {
+				$id_list    = implode( ',', array_map( 'intval', $user_ids ) );
+				$count_rows = $wpdb->get_results( "SELECT owner_id, COUNT(*) as cnt FROM $notes_table WHERE owner_id IN ($id_list) GROUP BY owner_id" );
+				if ( ! empty( $count_rows ) ) {
+					foreach ( $count_rows as $cr ) {
+						$note_counts[ (int) $cr->owner_id ] = (int) $cr->cnt;
+					}
+				}
+			}
+
 			foreach ( $users as $u ) {
 				$roles = (array) $u->roles;
 				$is_owner = ( $owner_id > 0 && (int) $u->ID === $owner_id );
@@ -576,14 +613,18 @@ class Notes_Adda_Ajax {
 					$app_role_label = 'Expert';
 				}
 
+				$clean_role = ( 'notes_adda_admin' === $app_role ? 'admin' : ( 'notes_adda_expert' === $app_role ? 'expert' : 'student' ) );
+
 				$profile = class_exists( 'Notes_Adda_User_Profile' ) ? Notes_Adda_User_Profile::get_by_user_id( $u->ID ) : null;
 
 				$user_list[] = array(
 					'id'           => $u->ID,
 					'username'     => $u->user_login,
+					'user_login'   => $u->user_login,
 					'display_name' => $u->display_name,
 					'email'        => $u->user_email,
-					'role'         => $app_role,
+					'role'         => $clean_role,
+					'app_role'     => $app_role,
 					'role_label'   => $app_role_label,
 					'avatar_url'   => get_avatar_url( $u->ID, array( 'size' => 64 ) ),
 					'college'      => $profile ? $profile->college : '',
@@ -591,12 +632,14 @@ class Notes_Adda_Ajax {
 					'registered'   => $u->user_registered,
 					'is_self'      => ( (int) $u->ID === (int) $user_id ),
 					'is_owner'     => $is_owner,
+					'notes_count'  => isset( $note_counts[ (int) $u->ID ] ) ? $note_counts[ (int) $u->ID ] : 0,
 				);
 			}
 		}
 
 		wp_send_json_success(
 			array(
+				'items'       => $user_list,
 				'users'       => $user_list,
 				'total'       => $total,
 				'page'        => $page,
@@ -616,8 +659,8 @@ class Notes_Adda_Ajax {
 			self::send_error( new WP_Error( 'notes_adda_forbidden', 'You do not have permission to manage user roles.' ) );
 		}
 
-		$target_user_id = isset( $_POST['user_id'] ) ? (int) $_POST['user_id'] : 0;
-		$new_role       = isset( $_POST['role'] ) ? sanitize_key( wp_unslash( $_POST['role'] ) ) : '';
+		$target_user_id = isset( $_POST['target_user_id'] ) ? (int) $_POST['target_user_id'] : ( isset( $_POST['user_id'] ) ? (int) $_POST['user_id'] : 0 );
+		$new_role       = isset( $_POST['new_role'] ) ? sanitize_key( wp_unslash( $_POST['new_role'] ) ) : ( isset( $_POST['role'] ) ? sanitize_key( wp_unslash( $_POST['role'] ) ) : '' );
 
 		if ( $target_user_id <= 0 ) {
 			self::send_error( new WP_Error( 'notes_adda_invalid_user_id', 'Please provide a valid user ID.' ) );

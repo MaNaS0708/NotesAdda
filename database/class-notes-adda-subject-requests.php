@@ -145,14 +145,29 @@ class Notes_Adda_Subject_Requests {
 	}
 
 	/**
-	 * Retrieve all subject requests (for Admin), sorted pending first, then newest first.
+	 * Retrieve all subject requests (for Admin), optionally filtered by status, sorted pending first, then newest first.
 	 *
+	 * @param string $status Optional status filter ('pending', 'approved', 'rejected', 'all').
 	 * @return array List of enriched request objects.
 	 */
-	public static function get_all_requests() {
+	public static function get_all_requests( $status = '' ) {
 		global $wpdb;
-		$table_name = $wpdb->prefix . 'notes_adda_subject_requests';
+		$table_name  = $wpdb->prefix . 'notes_adda_subject_requests';
 		$users_table = $wpdb->users;
+
+		$where_clauses = array( '1=1' );
+		$params        = array();
+
+		$status = sanitize_key( trim( (string) $status ) );
+		if ( ! empty( $status ) && 'all' !== $status ) {
+			if ( 'verified' === $status ) {
+				$status = 'approved';
+			}
+			$where_clauses[] = 'r.status = %s';
+			$params[]        = $status;
+		}
+
+		$where_sql = implode( ' AND ', $where_clauses );
 
 		$sql = "SELECT r.*,
 					u.display_name AS requester_name,
@@ -163,9 +178,16 @@ class Notes_Adda_Subject_Requests {
 				FROM $table_name r
 				LEFT JOIN $users_table u ON r.requester_id = u.ID
 				LEFT JOIN $users_table rev ON r.reviewed_by = rev.ID
+				WHERE $where_sql
 				ORDER BY CASE WHEN r.status = 'pending' THEN 0 ELSE 1 END, r.created_at DESC";
 
-		$results = $wpdb->get_results( $sql );
+		if ( ! empty( $params ) ) {
+			$prepared_sql = $wpdb->prepare( $sql, $params );
+		} else {
+			$prepared_sql = $sql;
+		}
+
+		$results = $wpdb->get_results( $prepared_sql );
 		return $results ? $results : array();
 	}
 

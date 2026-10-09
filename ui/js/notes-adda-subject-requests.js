@@ -15,6 +15,26 @@
 	const SubjectRequests = {
 		init: function() {
 			this.bindEvents();
+			this.updatePendingBadge();
+		},
+
+		updatePendingBadge: function() {
+			if (!NotesAdda.can_manage_subjects) return;
+			$.get(NotesAdda.ajax_url, {
+				action: 'notes_adda_get_subject_requests',
+				status: 'pending',
+				_ajax_nonce: NotesAdda.nonce
+			}, function(res) {
+				if (res.success && Array.isArray(res.data)) {
+					const count = res.data.length;
+					const $badge = $('#na-pending-requests-badge');
+					if (count > 0) {
+						$badge.text(count).show();
+					} else {
+						$badge.hide();
+					}
+				}
+			});
 		},
 
 		bindEvents: function() {
@@ -194,21 +214,61 @@
 			$empty.hide();
 			$container.empty();
 
+			const currentFilter = app.subjectRequestFilter || 'pending';
+
 			$.get(NotesAdda.ajax_url, {
 				action: 'notes_adda_get_subject_requests',
-				status: app.subjectRequestFilter || 'pending',
+				status: currentFilter,
 				_ajax_nonce: NotesAdda.nonce
 			}, function(res) {
 				$loading.hide();
 				if (res.success && res.data) {
-					const items = res.data;
-					$summary.text(`Subject requests (${items.length} total)`);
+					let items = res.data;
+					if (currentFilter !== 'all') {
+						const targetStatus = (currentFilter === 'verified' ? 'approved' : currentFilter);
+						items = items.filter(function(r) {
+							return r.status === targetStatus;
+						});
+					}
+
+					let filterLabel = currentFilter;
+					if (currentFilter === 'pending') filterLabel = 'pending';
+					else if (currentFilter === 'approved') filterLabel = 'approved';
+					else if (currentFilter === 'rejected') filterLabel = 'rejected';
+					else if (currentFilter === 'all') filterLabel = 'total';
+
+					$summary.text(`Subject requests (${items.length} ${filterLabel})`);
+
+					if (currentFilter === 'pending') {
+						const $badge = $('#na-pending-requests-badge');
+						if (items.length > 0) {
+							$badge.text(items.length).show();
+						} else {
+							$badge.hide();
+						}
+					}
 
 					if (items.length === 0) {
+						let emptyTitle = 'No requests found';
+						let emptyDesc = 'There are no subject requests matching the selected filter.';
+						if (currentFilter === 'pending') {
+							emptyTitle = 'No pending requests';
+							emptyDesc = 'There are no subject requests awaiting review right now.';
+						} else if (currentFilter === 'rejected') {
+							emptyTitle = 'No rejected requests';
+							emptyDesc = 'There are no rejected subject requests.';
+						} else if (currentFilter === 'approved') {
+							emptyTitle = 'No approved requests';
+							emptyDesc = 'There are no approved subject requests.';
+						}
+						$empty.find('.na-state-title').text(emptyTitle);
+						$empty.find('.na-state-desc').text(emptyDesc);
 						$empty.show();
 					} else {
 						self.renderAdminRequests(items, $container);
 					}
+				} else {
+					$empty.show();
 				}
 			});
 		},
@@ -269,6 +329,7 @@
 				if (res.success) {
 					app.showToast(`Subject "${name}" approved and added to catalog!`, 'success');
 					self.loadAdminRequests();
+					self.updatePendingBadge();
 					app.loadSubjects();
 				} else {
 					$btn.prop('disabled', false);
@@ -290,6 +351,7 @@
 				if (res.success) {
 					app.showToast(`Subject request "${name}" rejected.`, 'success');
 					self.loadAdminRequests();
+					self.updatePendingBadge();
 				} else {
 					$btn.prop('disabled', false);
 					app.showToast(res.data ? res.data.message : 'Error rejecting request', 'error');
@@ -308,6 +370,7 @@
 				if (res.success) {
 					app.showToast('Request deleted.', 'success');
 					self.loadAdminRequests();
+					self.updatePendingBadge();
 				} else {
 					app.showToast(res.data ? res.data.message : 'Error deleting request', 'error');
 				}

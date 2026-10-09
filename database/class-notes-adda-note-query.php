@@ -22,6 +22,11 @@ class Notes_Adda_Note_Query {
 			);
 		}
 
+		// Alias 'status' to 'review_status' if not explicitly provided
+		if ( ! isset( $args['review_status'] ) && isset( $args['status'] ) ) {
+			$args['review_status'] = $args['status'];
+		}
+
 		$is_review_queue = ! empty( $args['is_review_queue'] );
 
 		$current_user_id = is_user_logged_in() ? get_current_user_id() : 0;
@@ -29,6 +34,11 @@ class Notes_Adda_Note_Query {
 		$is_super_owner  = ( $super_owner_id > 0 && $current_user_id === $super_owner_id );
 		$is_admin        = $is_super_owner || user_can( $current_user_id, 'notes_adda_manage_users' ) || user_can( $current_user_id, 'manage_options' );
 		$is_reviewer     = $is_admin || user_can( $current_user_id, 'notes_adda_review_notes' );
+
+		// If caller is a reviewer and querying pending/rejected notes without specifying owner_id, treat as review queue
+		if ( ! $is_review_queue && $is_reviewer && isset( $args['review_status'] ) && in_array( $args['review_status'], array( 'pending', 'rejected' ), true ) && empty( $args['owner_id'] ) ) {
+			$is_review_queue = true;
+		}
 
 		if ( $is_review_queue && ! $is_reviewer ) {
 			return new WP_Error(

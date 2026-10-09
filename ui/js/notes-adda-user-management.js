@@ -71,7 +71,7 @@
 			}, function(res) {
 				$loading.hide();
 				if (res.success && res.data) {
-					const items = res.data.items || [];
+					const items = res.data.items || res.data.users || [];
 					const total = parseInt(res.data.total, 10) || 0;
 					const totalPages = parseInt(res.data.total_pages, 10) || 1;
 
@@ -125,13 +125,24 @@
 				const isOwner = !!u.is_owner;
 				const disabledAttr = (isSelf || isOwner) ? 'disabled' : '';
 
+				let userRole = (u.role || 'student').toLowerCase();
+				if (userRole.indexOf('admin') !== -1) {
+					userRole = 'admin';
+				} else if (userRole.indexOf('expert') !== -1) {
+					userRole = 'expert';
+				} else {
+					userRole = 'student';
+				}
+
 				const roleSelect = `
 					<select class="na-select na-user-role-select" data-user-id="${u.id}" ${disabledAttr} aria-label="Role for ${app.escapeHtml(u.display_name)}">
-						<option value="student" ${u.role === 'student' ? 'selected' : ''}>Student</option>
-						<option value="expert" ${u.role === 'expert' ? 'selected' : ''}>Expert</option>
-						<option value="admin" ${u.role === 'admin' ? 'selected' : ''}>Admin</option>
+						<option value="student" ${userRole === 'student' ? 'selected' : ''}>Student</option>
+						<option value="expert" ${userRole === 'expert' ? 'selected' : ''}>Expert</option>
+						<option value="admin" ${userRole === 'admin' ? 'selected' : ''}>Admin</option>
 					</select>
 				`;
+
+				const loginName = u.user_login || u.username || '';
 
 				// Table Row
 				tableHtml += `
@@ -141,7 +152,7 @@
 								<img src="${app.escapeHtml(u.avatar_url || '')}" alt="${app.escapeHtml(u.display_name)}">
 								<div class="na-user-row-info">
 									<span class="na-user-row-name">${app.escapeHtml(u.display_name)}</span>
-									<span class="na-user-row-login">@${app.escapeHtml(u.user_login)}</span>
+									<span class="na-user-row-login">@${app.escapeHtml(loginName)}</span>
 								</div>
 							</div>
 						</td>
@@ -159,7 +170,7 @@
 							<img src="${app.escapeHtml(u.avatar_url || '')}" alt="${app.escapeHtml(u.display_name)}">
 							<div class="na-user-row-info">
 								<span class="na-user-row-name">${app.escapeHtml(u.display_name)}</span>
-								<span class="na-user-row-login">@${app.escapeHtml(u.user_login)}</span>
+								<span class="na-user-row-login">@${app.escapeHtml(loginName)}</span>
 							</div>
 						</div>
 						<div style="font-size:12px; color:var(--na-muted);">
@@ -189,7 +200,9 @@
 			$.post(NotesAdda.ajax_url, {
 				action: 'notes_adda_update_user_role',
 				target_user_id: userId,
+				user_id: userId,
 				new_role: newRole,
+				role: newRole,
 				_ajax_nonce: NotesAdda.nonce
 			}, function(res) {
 				$select.prop('disabled', false);
