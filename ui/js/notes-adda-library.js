@@ -277,7 +277,7 @@
 									<button type="button" class="na-icon-btn na-btn-bookmark ${isBookmarked ? 'bookmarked' : ''}" data-id="${note.id}" title="${isBookmarked ? 'Remove saved note' : 'Save note'}" aria-label="Save note">
 										<svg viewBox="0 0 24 24" class="na-svg-bookmark" width="16" height="16" fill="${isBookmarked ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
 									</button>
-									<button type="button" class="na-icon-btn na-btn-like ${isLiked ? 'liked' : ''}" data-id="${note.id}" title="Like note" aria-label="Like note">
+									<button type="button" class="na-icon-btn na-btn-like ${isLiked ? 'liked' : ''}" data-id="${note.id}" title="${isLiked ? 'Unlike note' : 'Like note'}" aria-label="${isLiked ? 'Unlike note' : 'Like note'}">
 										<span class="dashicons dashicons-heart" aria-hidden="true"></span>
 										<span class="like-count">${note.like_count || 0}</span>
 									</button>
@@ -313,11 +313,6 @@
 
 				// Load tags asynchronously
 				self.loadCardTags(note.id);
-
-				// Check like status if verified
-				if (isVerified) {
-					self.checkLikeStatus(note.id, $card.find('.na-btn-like'));
-				}
 			});
 		},
 
@@ -342,42 +337,69 @@
 				note_id: note_id
 			}, function(res) {
 				if (res.success && res.data) {
-					if (res.data.is_liked) {
-						$btn.addClass('liked');
-					} else {
-						$btn.removeClass('liked');
+					const isLiked = !!(res.data.is_liked !== undefined ? res.data.is_liked : res.data.has_liked);
+					$btn.toggleClass('liked', isLiked);
+					if (typeof res.data.like_count !== 'undefined') {
+						$btn.find('.like-count').text(parseInt(res.data.like_count, 10) || 0);
 					}
-					$btn.find('.like-count').text(res.data.like_count || 0);
+					$btn.attr('title', isLiked ? 'Unlike note' : 'Like note');
+					$btn.attr('aria-label', isLiked ? 'Unlike note' : 'Like note');
 				}
 			});
 		},
 
 		toggleLike: function(id, isLiked, $btn) {
 			const app = window.NotesAddaApp;
+
+			if (!NotesAdda.is_logged_in) {
+				app.showToast('Please sign in to like notes.', 'error');
+				return;
+			}
+
 			if ($btn.prop('disabled')) return;
 			$btn.prop('disabled', true);
 
-			const action = isLiked ? 'notes_adda_remove_like' : 'notes_adda_add_like';
 			$.post(NotesAdda.ajax_url, {
-				action: action,
+				action: 'notes_adda_toggle_like',
 				note_id: id,
 				_ajax_nonce: NotesAdda.nonce
 			}, function(res) {
 				$btn.prop('disabled', false);
 				if (res.success && res.data) {
-					const newLiked = !!res.data.has_liked;
+					const newLiked = !!(res.data.is_liked !== undefined ? res.data.is_liked : res.data.has_liked);
 					const newCount = parseInt(res.data.like_count, 10) || 0;
-					$btn.toggleClass('liked', newLiked);
-					$btn.find('.like-count').text(newCount);
-					// Synchronize other buttons matching this note ID
-					$(`.na-btn-like[data-id="${id}"]`).toggleClass('liked', newLiked);
-					$(`.na-btn-like[data-id="${id}"] .like-count`).text(newCount);
+
+					// Synchronize all instances across the page (cards, details, modals)
+					$(`.na-btn-like[data-id="${id}"]`).each(function() {
+						const $el = $(this);
+						$el.toggleClass('liked', newLiked);
+						$el.find('.like-count').text(newCount);
+						$el.find('.like-label').text(newLiked ? 'Liked' : 'Like');
+						$el.attr('title', newLiked ? 'Unlike note' : 'Like note');
+						$el.attr('aria-label', newLiked ? 'Unlike note' : 'Like note');
+					});
+
+					// Update cached note data on card if present
+					$(`.na-card[data-id="${id}"]`).each(function() {
+						const cardData = $(this).data('note');
+						if (cardData) {
+							cardData.is_liked = newLiked;
+							cardData.like_count = newCount;
+							$(this).data('note', cardData);
+						}
+					});
+
+					app.showToast(newLiked ? 'Note liked!' : 'Note unliked', 'success');
 				} else {
-					app.showToast(res.data ? res.data.message : 'Unable to update like', 'error');
+					const msg = (res.data && res.data.message) ? res.data.message : 'Unable to update like';
+					app.showToast(msg, 'error');
 				}
-			}).fail(function() {
+			}).fail(function(xhr) {
 				$btn.prop('disabled', false);
-				app.showToast('Network error updating like', 'error');
+				const errorMsg = (xhr.responseJSON && xhr.responseJSON.data && xhr.responseJSON.data.message)
+					? xhr.responseJSON.data.message
+					: 'Network error updating like';
+				app.showToast(errorMsg, 'error');
 			});
 		}
 	};

@@ -69,6 +69,7 @@ class Notes_Adda_Ajax {
 		add_action( 'wp_ajax_nopriv_notes_adda_get_like_status', array( __CLASS__, 'get_like_status' ) );
 		add_action( 'wp_ajax_notes_adda_add_like', array( __CLASS__, 'add_like' ) );
 		add_action( 'wp_ajax_notes_adda_remove_like', array( __CLASS__, 'remove_like' ) );
+		add_action( 'wp_ajax_notes_adda_toggle_like', array( __CLASS__, 'toggle_like' ) );
 
 		// Reports
 		add_action( 'wp_ajax_notes_adda_create_report', array( __CLASS__, 'create_report' ) );
@@ -788,7 +789,16 @@ class Notes_Adda_Ajax {
 			$has_liked = Notes_Adda_Likes::has_liked( $note_id, $user_id );
 		}
 
-		wp_send_json_success( array( 'has_liked' => $has_liked ) );
+		$note = Notes_Adda_Notes::get_by_id( $note_id );
+		$like_count = ( $note && ! is_wp_error( $note ) ) ? (int) $note->like_count : 0;
+
+		wp_send_json_success(
+			array(
+				'has_liked'  => $has_liked,
+				'is_liked'   => $has_liked,
+				'like_count' => $like_count,
+			)
+		);
 	}
 
 	/**
@@ -807,7 +817,13 @@ class Notes_Adda_Ajax {
 			self::send_error( $result );
 		}
 
-		wp_send_json_success( array( 'like_count' => $result ) );
+		wp_send_json_success(
+			array(
+				'has_liked'  => true,
+				'is_liked'   => true,
+				'like_count' => $result,
+			)
+		);
 	}
 
 	/**
@@ -826,7 +842,32 @@ class Notes_Adda_Ajax {
 			self::send_error( $result );
 		}
 
-		wp_send_json_success( array( 'like_count' => $result ) );
+		wp_send_json_success(
+			array(
+				'has_liked'  => false,
+				'is_liked'   => false,
+				'like_count' => $result,
+			)
+		);
+	}
+
+	/**
+	 * Toggle like handler.
+	 */
+	public static function toggle_like() {
+		$user_id = self::check_auth();
+
+		$note_id = isset( $_POST['note_id'] ) ? (int) $_POST['note_id'] : 0;
+		if ( $note_id <= 0 ) {
+			self::send_error( new WP_Error( 'notes_adda_invalid_note_id', 'Please provide a valid note ID.' ) );
+		}
+
+		$result = Notes_Adda_Likes::toggle( $note_id, $user_id );
+		if ( is_wp_error( $result ) ) {
+			self::send_error( $result );
+		}
+
+		wp_send_json_success( $result );
 	}
 
 	/**

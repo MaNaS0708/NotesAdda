@@ -193,4 +193,35 @@ class Notes_Adda_Likes {
 		return $new_like_count;
 	}
 
+	/**
+	 * Toggle a like on a note.
+	 *
+	 * @param int $note_id Note ID.
+	 * @param int $user_id WordPress user ID.
+	 * @return array|WP_Error Array containing is_liked, has_liked, and updated like_count on success, WP_Error on failure.
+	 */
+	public static function toggle( $note_id, $user_id ) {
+		if ( self::has_liked( $note_id, $user_id ) ) {
+			$new_count = self::remove( $note_id, $user_id );
+			if ( is_wp_error( $new_count ) ) {
+				return $new_count;
+			}
+			return array(
+				'is_liked'   => false,
+				'has_liked'  => false,
+				'like_count' => $new_count,
+			);
+		} else {
+			$new_count = self::add( $note_id, $user_id );
+			if ( is_wp_error( $new_count ) ) {
+				return $new_count;
+			}
+			return array(
+				'is_liked'   => true,
+				'has_liked'  => true,
+				'like_count' => $new_count,
+			);
+		}
+	}
+
 }

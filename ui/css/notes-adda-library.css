@@ -228,14 +228,23 @@
 	height: 34px;
 }
 
+.na-card-actions .na-icon-btn.na-btn-like {
+	width: auto;
+	min-width: 34px;
+	padding: 0 8px;
+	gap: 4px;
+}
+
 /* Like & Bookmark Active Styles */
-.na-icon-btn.liked {
+.na-icon-btn.liked,
+.na-btn-like.liked {
 	color: var(--na-danger) !important;
 	border-color: rgba(255, 51, 102, 0.4) !important;
 	background: var(--na-danger-soft) !important;
 }
 
-.na-icon-btn.liked .dashicons {
+.na-icon-btn.liked .dashicons,
+.na-btn-like.liked .dashicons {
 	color: var(--na-danger) !important;
 }
 
@@ -245,7 +254,8 @@
 	background: var(--na-brand-soft) !important;
 }
 
-.na-icon-btn .like-count {
+.na-icon-btn .like-count,
+.na-btn-like .like-count {
 	font-family: var(--na-font-mono);
 	font-size: 11px;
 	margin-left: 4px;

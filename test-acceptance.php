@@ -339,6 +339,19 @@ assert_test(!Notes_Adda_Likes::has_liked($note1_id, $student_user->ID), "has_lik
 $rej_like = Notes_Adda_Likes::add($note2_id, $student_user->ID);
 assert_test(is_wp_error($rej_like), "Liking pending/rejected note strictly blocked");
 
+// 7.4 Atomic toggle like on verified note (like -> unlike)
+$toggle_res1 = Notes_Adda_Likes::toggle($note1_id, $student_user->ID);
+assert_test(!is_wp_error($toggle_res1) && $toggle_res1['is_liked'] === true && $toggle_res1['like_count'] === 1, "Atomic toggle on unliked note sets is_liked=true and like_count=1");
+assert_test(Notes_Adda_Likes::has_liked($note1_id, $student_user->ID), "has_liked returns true after first toggle");
+
+$toggle_res2 = Notes_Adda_Likes::toggle($note1_id, $student_user->ID);
+assert_test(!is_wp_error($toggle_res2) && $toggle_res2['is_liked'] === false && $toggle_res2['like_count'] === 0, "Atomic toggle on liked note sets is_liked=false and like_count=0");
+assert_test(!Notes_Adda_Likes::has_liked($note1_id, $student_user->ID), "has_liked returns false after second toggle");
+
+// 7.5 Cannot toggle pending note
+$rej_toggle = Notes_Adda_Likes::toggle($note2_id, $student_user->ID);
+assert_test(is_wp_error($rej_toggle), "Toggling pending/rejected note strictly blocked");
+
 echo "\n=========================================\n";
 echo "SUMMARY: Passed: $pass_count, Failed: $fail_count\n";
 echo "=========================================\n";

@@ -184,9 +184,9 @@
 								<svg viewBox="0 0 24 24" class="na-svg-bookmark" width="16" height="16" fill="${isBookmarked ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
 								<span>${isBookmarked ? 'Saved to Bookmarks' : 'Save Bookmark'}</span>
 							</button>
-							<button type="button" class="na-btn na-btn-secondary na-btn-like ${isLiked ? 'liked' : ''}" data-id="${note.id}">
+							<button type="button" class="na-btn na-btn-secondary na-btn-like ${isLiked ? 'liked' : ''}" data-id="${note.id}" title="${isLiked ? 'Unlike note' : 'Like note'}" aria-label="${isLiked ? 'Unlike note' : 'Like note'}">
 								<span class="dashicons dashicons-heart"></span>
-								<span>Like</span> (<span class="like-count">${note.like_count || 0}</span>)
+								<span class="like-label">${isLiked ? 'Liked' : 'Like'}</span> (<span class="like-count">${note.like_count || 0}</span>)
 							</button>
 						` : ''}
 						${!isOwner && isVerified ? `
@@ -262,9 +262,9 @@
 							<svg viewBox="0 0 24 24" class="na-svg-bookmark" width="16" height="16" fill="${isBookmarked ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
 							<span>${isBookmarked ? 'Saved' : 'Save'}</span>
 						</button>
-						<button type="button" class="na-btn na-btn-secondary na-btn-like ${isLiked ? 'liked' : ''}" data-id="${note.id}">
+						<button type="button" class="na-btn na-btn-secondary na-btn-like ${isLiked ? 'liked' : ''}" data-id="${note.id}" title="${isLiked ? 'Unlike note' : 'Like note'}" aria-label="${isLiked ? 'Unlike note' : 'Like note'}">
 							<span class="dashicons dashicons-heart"></span>
-							<span>Like</span> (<span class="like-count">${note.like_count || 0}</span>)
+							<span class="like-label">${isLiked ? 'Liked' : 'Like'}</span> (<span class="like-count">${note.like_count || 0}</span>)
 						</button>
 					` : ''}
 				</div>
