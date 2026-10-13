@@ -94,8 +94,10 @@ $can_users            = $is_owner || current_user_can( 'notes_adda_manage_users'
 			</main>
 		</div>
 
-		<!-- Upload / Edit Note Modal -->
+		<!-- Application Modals (Mounted at Root Level to avoid stacking context traps) -->
 		<?php include NOTES_ADDA_PATH . 'ui/html/partials/upload-modal.php'; ?>
+		<?php include NOTES_ADDA_PATH . 'ui/html/partials/subject-request-modal.php'; ?>
+		<?php include NOTES_ADDA_PATH . 'ui/html/partials/pdf-preview-modal.php'; ?>
 	<?php endif; ?>
 
 	<!-- Star Rating Gradients (Hidden Defs) -->

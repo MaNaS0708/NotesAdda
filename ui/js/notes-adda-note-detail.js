@@ -39,6 +39,37 @@
 					self.reportNote(noteId, reason.trim());
 				}
 			});
+
+			// PDF preview trigger
+			$(document).on('click', '.na-btn-open-pdf', function(e) {
+				e.preventDefault();
+				const url = $(this).data('url') || $(this).attr('href');
+				const title = $(this).data('title') || $(this).attr('title') || 'Document Preview';
+				if (url && url !== '#') {
+					self.openPdfPreview(url, title);
+				}
+			});
+
+			$(document).on('click', '[data-modal="pdf-preview"]', function() {
+				self.closePdfPreview();
+			});
+		},
+
+		openPdfPreview: function(url, title) {
+			if (window.NotesAddaApp && typeof window.NotesAddaApp.openPdfModal === 'function') {
+				window.NotesAddaApp.openPdfModal(url, title);
+				return;
+			}
+			const $modal = $('#na-pdf-preview-modal');
+			const $frame = $('#na-pdf-iframe').length ? $('#na-pdf-iframe') : $('#na-pdf-preview-frame');
+			$('#na-pdf-open-newtab-btn, #na-pdf-open-new-tab').attr('href', url);
+			$frame.attr('src', url + '#view=FitH');
+			$modal.addClass('open').attr('aria-hidden', 'false');
+		},
+
+		closePdfPreview: function() {
+			$('#na-pdf-iframe, #na-pdf-preview-frame').attr('src', 'about:blank');
+			$('#na-pdf-preview-modal').removeClass('open').attr('aria-hidden', 'true');
 		},
 
 		/**
@@ -111,7 +142,45 @@
 				statusBadgeHtml = '<span class="na-badge na-badge-pending"><span class="dashicons dashicons-clock"></span> Pending Review</span>';
 			}
 
-			// Expert rating section
+			// Expert rating stats
+			const revRating = note.reviewer_rating;
+			const avgScore = (revRating && revRating.average) ? parseFloat(revRating.average) : 0;
+			const formattedAvgScore = (revRating && revRating.formatted_average) ? revRating.formatted_average : (avgScore > 0 ? Number(avgScore).toFixed(2) : 'No ratings');
+			const ratingCount = (revRating && revRating.count) ? parseInt(revRating.count, 10) : 0;
+			const likeCount = parseInt(note.like_count, 10) || 0;
+
+			// Metrics strip (Average Rating, Total Likes, Expert Verifier)
+			const metricsBarHtml = `
+				<div class="na-note-metrics-strip">
+					<div class="na-metric-strip-item na-metric-rating" data-expert-id="${note.reviewed_by || ''}" data-subject="${app.escapeHtml(note.subject || '')}">
+						<span class="na-metric-strip-icon" style="color:#ffb703;">★</span>
+						<span class="na-metric-strip-text">
+							<span class="na-metric-strip-label">Average Rating:</span>
+							<strong class="na-metric-avg-rating-val">${avgScore > 0 ? formattedAvgScore : 'Not rated yet'}</strong>${avgScore > 0 ? '<span class="na-metric-scale"> / 5.0</span>' : ''}
+							${avgScore > 0 ? `<span class="na-metric-count">(${ratingCount} ${ratingCount === 1 ? 'rating' : 'ratings'})</span>` : ''}
+						</span>
+					</div>
+					<div class="na-metric-strip-divider" aria-hidden="true"></div>
+					<div class="na-metric-strip-item na-metric-likes" data-id="${note.id}">
+						<span class="na-metric-strip-icon" style="color:var(--na-danger);">♥</span>
+						<span class="na-metric-strip-text">
+							<span class="na-metric-strip-label">Likes:</span>
+							<strong class="na-metric-like-count">${likeCount}</strong> <span class="na-metric-like-unit">${likeCount === 1 ? 'Like' : 'Likes'}</span>
+						</span>
+					</div>
+					${note.reviewer_name ? `
+						<div class="na-metric-strip-divider" aria-hidden="true"></div>
+						<div class="na-metric-strip-item na-metric-verifier">
+							<span class="dashicons dashicons-yes-alt na-metric-strip-icon" style="color:var(--na-brand);"></span>
+							<span class="na-metric-strip-text">
+								Verified for <strong>${app.escapeHtml(note.subject || 'General')}</strong> by <strong>${app.escapeHtml(note.reviewer_name)}</strong>
+							</span>
+						</div>
+					` : ''}
+				</div>
+			`;
+
+			// Expert rating interactive section
 			let expertRatingHtml = '';
 			if (isVerified && note.reviewed_by && note.reviewed_by !== parseInt(NotesAdda.user_id, 10)) {
 				const currentRating = (note.reviewer_rating && note.reviewer_rating.user_rating) ? note.reviewer_rating.user_rating : 0;
@@ -120,7 +189,8 @@
 						note.reviewed_by,
 						note.reviewer_name || 'Expert Reviewer',
 						note.subject,
-						currentRating
+						currentRating,
+						note.reviewer_rating
 					);
 				}
 			}
@@ -149,6 +219,9 @@
 						</div>
 					</div>
 
+					<!-- Clean, Polished Community Metrics Strip -->
+					${metricsBarHtml}
+
 					${isPending ? `
 						<div class="na-state-box" style="min-height:auto; padding:16px; margin-bottom:18px; border-color:var(--na-warning); text-align:left; place-content:start;">
 							<p style="margin:0; color:var(--na-warning); font-size:13px;">
@@ -161,12 +234,7 @@
 								<strong>Submission Rejected:</strong> "${app.escapeHtml(note.review_note || 'Please review guidelines and resubmit.')}"
 							</p>
 						</div>
-					` : (note.reviewer_name ? `
-						<div style="margin-bottom:18px; padding:12px 16px; border-radius:var(--na-radius-sm); background:var(--na-surface-card); border:1px solid var(--na-line); font-size:13px;">
-							<span class="dashicons dashicons-yes-alt" style="color:var(--na-brand);"></span>
-							<span>Verified for <strong>${app.escapeHtml(note.subject || 'General')}</strong> by <strong>${app.escapeHtml(note.reviewer_name)}</strong> ${note.reviewed_at ? 'on ' + app.formatDate(note.reviewed_at) : ''}</span>
-						</div>
-					` : ''))}
+					` : '')}
 
 					<div class="na-preview-desc">
 						<h4 style="font-size:14px; color:var(--na-ink); margin-bottom:6px;">Description / Course Overview</h4>
@@ -175,25 +243,28 @@
 
 					<div class="na-preview-actions">
 						${note.file_url ? `
-							<a href="${app.escapeHtml(note.file_url)}" target="_blank" rel="noopener noreferrer" class="na-btn na-btn-primary">
-								<span class="dashicons dashicons-pdf"></span> <span>Download PDF</span>
-							</a>
-						` : ''}
-						${isVerified ? `
-							<button type="button" class="na-btn na-btn-secondary na-btn-bookmark ${isBookmarked ? 'bookmarked' : ''}" data-id="${note.id}">
-								<svg viewBox="0 0 24 24" class="na-svg-bookmark" width="16" height="16" fill="${isBookmarked ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
-								<span>${isBookmarked ? 'Saved to Bookmarks' : 'Save Bookmark'}</span>
-							</button>
-							<button type="button" class="na-btn na-btn-secondary na-btn-like ${isLiked ? 'liked' : ''}" data-id="${note.id}" title="${isLiked ? 'Unlike note' : 'Like note'}" aria-label="${isLiked ? 'Unlike note' : 'Like note'}">
-								<span class="dashicons dashicons-heart"></span>
-								<span class="like-label">${isLiked ? 'Liked' : 'Like'}</span> (<span class="like-count">${note.like_count || 0}</span>)
+							<button type="button" class="na-btn na-btn-primary na-btn-open-pdf" data-url="${app.escapeHtml(note.file_url)}" data-title="${app.escapeHtml(note.title)}" title="Open PDF preview">
+								<svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor" aria-hidden="true"><path d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/></svg>
+								<span>Open PDF</span>
 							</button>
 						` : ''}
-						${!isOwner && isVerified ? `
-							<button type="button" class="na-btn na-btn-ghost na-btn-report" data-id="${note.id}">
-								<span class="dashicons dashicons-flag"></span> <span>Report</span>
-							</button>
-						` : ''}
+						<div class="na-secondary-action-group">
+							${isVerified ? `
+								<button type="button" class="na-btn na-btn-secondary na-btn-bookmark ${isBookmarked ? 'bookmarked' : ''}" data-id="${note.id}">
+									<svg viewBox="0 0 24 24" class="na-svg-bookmark" width="15" height="15" fill="${isBookmarked ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
+									<span>${isBookmarked ? 'Saved to Bookmarks' : 'Save Bookmark'}</span>
+								</button>
+								<button type="button" class="na-btn na-btn-secondary na-btn-like ${isLiked ? 'liked' : ''}" data-id="${note.id}" title="${isLiked ? 'Unlike note' : 'Like note'}" aria-label="${isLiked ? 'Unlike note' : 'Like note'}">
+									<span class="dashicons dashicons-heart"></span>
+									<span class="like-label">${isLiked ? 'Liked' : 'Like'}</span> (<span class="like-count">${note.like_count || 0}</span>)
+								</button>
+							` : ''}
+							${!isOwner && isVerified ? `
+								<button type="button" class="na-btn na-btn-ghost na-btn-report" data-id="${note.id}">
+									<span class="dashicons dashicons-flag"></span> <span>Report</span>
+								</button>
+							` : ''}
+						</div>
 					</div>
 
 					${expertRatingHtml}
@@ -224,6 +295,13 @@
 				statusBadgeHtml = '<span class="na-badge na-badge-pending"><span class="dashicons dashicons-clock"></span> Pending</span>';
 			}
 
+			// Modal rating & likes stats
+			const revRating = note.reviewer_rating;
+			const avgScore = (revRating && revRating.average) ? parseFloat(revRating.average) : 0;
+			const formattedAvgScore = (revRating && revRating.formatted_average) ? revRating.formatted_average : (avgScore > 0 ? Number(avgScore).toFixed(2) : 'No ratings');
+			const ratingCount = (revRating && revRating.count) ? parseInt(revRating.count, 10) : 0;
+			const likeCount = parseInt(note.like_count, 10) || 0;
+
 			const modalHtml = `
 				<div class="na-preview-header">
 					<div class="na-badge-group">
@@ -247,26 +325,47 @@
 					</div>
 				</div>
 
+				<div class="na-note-metrics-strip" style="margin: 12px 0 16px;">
+					<div class="na-metric-strip-item na-metric-rating" data-expert-id="${note.reviewed_by || ''}" data-subject="${app.escapeHtml(note.subject || '')}">
+						<span class="na-metric-strip-icon" style="color:#ffb703;">★</span>
+						<span class="na-metric-strip-text">
+							<span class="na-metric-strip-label">Average:</span>
+							<strong class="na-metric-avg-rating-val">${avgScore > 0 ? formattedAvgScore : 'Not rated yet'}</strong>${avgScore > 0 ? '<span class="na-metric-scale"> / 5.0</span>' : ''}
+							${avgScore > 0 ? `<span class="na-metric-count">(${ratingCount})</span>` : ''}
+						</span>
+					</div>
+					<div class="na-metric-strip-divider" aria-hidden="true"></div>
+					<div class="na-metric-strip-item na-metric-likes" data-id="${note.id}">
+						<span class="na-metric-strip-icon" style="color:var(--na-danger);">♥</span>
+						<span class="na-metric-strip-text">
+							<strong class="na-metric-like-count">${likeCount}</strong> <span class="na-metric-like-unit">${likeCount === 1 ? 'Like' : 'Likes'}</span>
+						</span>
+					</div>
+				</div>
+
 				<div class="na-preview-desc">
 					<p>${app.escapeHtml(note.description || 'No description provided.')}</p>
 				</div>
 
 				<div class="na-preview-actions">
 					${note.file_url ? `
-						<a href="${app.escapeHtml(note.file_url)}" target="_blank" rel="noopener noreferrer" class="na-btn na-btn-primary">
-							<span class="dashicons dashicons-pdf"></span> <span>Open PDF</span>
-						</a>
-					` : ''}
-					${isVerified ? `
-						<button type="button" class="na-btn na-btn-secondary na-btn-bookmark ${isBookmarked ? 'bookmarked' : ''}" data-id="${note.id}">
-							<svg viewBox="0 0 24 24" class="na-svg-bookmark" width="16" height="16" fill="${isBookmarked ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
-							<span>${isBookmarked ? 'Saved' : 'Save'}</span>
-						</button>
-						<button type="button" class="na-btn na-btn-secondary na-btn-like ${isLiked ? 'liked' : ''}" data-id="${note.id}" title="${isLiked ? 'Unlike note' : 'Like note'}" aria-label="${isLiked ? 'Unlike note' : 'Like note'}">
-							<span class="dashicons dashicons-heart"></span>
-							<span class="like-label">${isLiked ? 'Liked' : 'Like'}</span> (<span class="like-count">${note.like_count || 0}</span>)
+						<button type="button" class="na-btn na-btn-primary na-btn-open-pdf" data-url="${app.escapeHtml(note.file_url)}" data-title="${app.escapeHtml(note.title)}" title="Open PDF preview">
+							<svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor" aria-hidden="true"><path d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/></svg>
+							<span>Open PDF</span>
 						</button>
 					` : ''}
+					<div class="na-secondary-action-group">
+						${isVerified ? `
+							<button type="button" class="na-btn na-btn-secondary na-btn-bookmark ${isBookmarked ? 'bookmarked' : ''}" data-id="${note.id}">
+								<svg viewBox="0 0 24 24" class="na-svg-bookmark" width="15" height="15" fill="${isBookmarked ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
+								<span>${isBookmarked ? 'Saved' : 'Save'}</span>
+							</button>
+							<button type="button" class="na-btn na-btn-secondary na-btn-like ${isLiked ? 'liked' : ''}" data-id="${note.id}" title="${isLiked ? 'Unlike note' : 'Like note'}" aria-label="${isLiked ? 'Unlike note' : 'Like note'}">
+								<span class="dashicons dashicons-heart"></span>
+								<span class="like-label">${isLiked ? 'Liked' : 'Like'}</span> (<span class="like-count">${note.like_count || 0}</span>)
+							</button>
+						` : ''}
+					</div>
 				</div>
 			`;
 

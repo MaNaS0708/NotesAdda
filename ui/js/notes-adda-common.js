@@ -115,8 +115,12 @@
 					$('#na-review-modal').removeClass('open');
 				} else if (modalKey === 'subject-request') {
 					$('#na-subject-request-modal').removeClass('open');
+				} else if (modalKey === 'pdf-preview') {
+					$('#na-pdf-preview-modal').removeClass('open');
+					$('#na-pdf-iframe').attr('src', 'about:blank');
 				} else {
 					$('.na-modal-overlay').removeClass('open');
+					$('#na-pdf-iframe').attr('src', 'about:blank');
 				}
 			});
 
@@ -124,16 +128,37 @@
 			$(document).on('click', '.na-modal-overlay', function(e) {
 				if ($(e.target).hasClass('na-modal-overlay')) {
 					$(this).removeClass('open');
+					if ($(this).attr('id') === 'na-pdf-preview-modal') {
+						$('#na-pdf-iframe').attr('src', 'about:blank');
+					}
 				}
 			});
 
 			// Close on ESC key
 			$(document).on('keydown', function(e) {
 				if (e.key === 'Escape' || e.keyCode === 27) {
-					$('.na-modal-overlay').removeClass('open');
+					if ($('#na-pdf-preview-modal').hasClass('open')) {
+						$('#na-pdf-preview-modal').removeClass('open');
+						$('#na-pdf-iframe').attr('src', 'about:blank');
+					} else if ($('#na-subject-request-modal').hasClass('open')) {
+						$('#na-subject-request-modal').removeClass('open');
+					} else {
+						$('.na-modal-overlay').removeClass('open');
+					}
 					$('.na-notifications-dropdown').hide();
 					$('.na-notifications-toggle').attr('aria-expanded', 'false');
 					self.closeMobileDrawer();
+				}
+			});
+
+			// Global PDF preview button trigger
+			$(document).on('click', '.na-btn-open-pdf, .na-open-pdf-btn, [data-action="preview-pdf"]', function(e) {
+				e.preventDefault();
+				e.stopPropagation();
+				const url = $(this).data('url') || $(this).attr('href');
+				const title = $(this).data('title') || $(this).attr('title') || 'Document Preview';
+				if (url && url !== '#') {
+					self.openPdfModal(url, title);
 				}
 			});
 		},
@@ -408,6 +433,18 @@
 			this._toastTimeout = setTimeout(function() {
 				$toast.removeClass('show');
 			}, 3600);
+		},
+
+		/**
+		 * Open dedicated PDF Preview Modal with dark chrome and isolated white viewport.
+		 */
+		openPdfModal: function(url, title) {
+			if (!url) return;
+			const displayTitle = title ? title.trim() : 'Document Preview';
+			$('#na-pdf-modal-title').text(displayTitle);
+			$('#na-pdf-iframe').attr('src', url);
+			$('#na-pdf-open-newtab-btn').attr('href', url);
+			$('#na-pdf-preview-modal').addClass('open');
 		}
 	};
 

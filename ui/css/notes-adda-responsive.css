@@ -239,6 +239,34 @@
 		flex-direction: column;
 		gap: 12px;
 	}
+
+	/* Note Details & Rating Widget Responsive Layout */
+	.na-note-metrics-strip {
+		gap: 12px;
+		padding: 10px 14px;
+	}
+
+	.na-contextual-rating-widget {
+		padding: 18px 16px;
+	}
+
+	.na-rating-ctrl-header {
+		flex-direction: column;
+		align-items: flex-start;
+		gap: 10px;
+	}
+
+	.na-rating-score-pill {
+		align-self: flex-start;
+	}
+
+	.na-modal-pdf,
+	.na-pdf-modal-dialog {
+		width: calc(100vw - 16px);
+		height: calc(100vh - 24px);
+		max-height: calc(100vh - 24px);
+		margin: 8px auto;
+	}
 }
 
 /* ==================================================
@@ -325,6 +353,38 @@
 		right: 12px;
 		width: auto;
 		max-height: calc(100vh - 80px);
+	}
+
+	.na-note-metrics-strip {
+		flex-direction: column;
+		align-items: flex-start;
+		gap: 10px;
+	}
+
+	.na-metric-strip-divider {
+		display: none;
+	}
+
+	.na-secondary-action-group {
+		width: 100%;
+		gap: 8px;
+	}
+
+	.na-secondary-action-group .na-btn {
+		flex: 1 1 auto;
+		justify-content: center;
+	}
+
+	.na-rating-action-row {
+		flex-direction: column;
+		align-items: flex-start;
+		gap: 10px;
+	}
+
+	.na-submit-rating-btn {
+		width: auto !important;
+		max-width: max-content !important;
+		align-self: flex-start !important;
 	}
 }
 

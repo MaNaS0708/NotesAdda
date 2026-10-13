@@ -20,6 +20,16 @@
 	overflow-y: auto;
 }
 
+/* Secondary / nested modals open in foreground above existing modals */
+#na-subject-request-modal {
+	z-index: 1100;
+}
+
+#na-pdf-preview-modal {
+	z-index: 1050;
+	padding: clamp(12px, 2vw, 24px);
+}
+
 .na-modal-overlay.open {
 	display: grid;
 	animation: na-fade-in 0.2s cubic-bezier(0.16, 1, 0.3, 1);
@@ -39,6 +49,86 @@
 
 .na-modal-lg {
 	max-width: 680px;
+}
+
+/* Polished Large PDF Preview Modal */
+.na-modal-pdf {
+	max-width: 1100px;
+	width: min(96vw, 1100px);
+	height: min(92vh, 880px);
+	max-height: 92vh;
+	display: flex;
+	flex-direction: column;
+	border-radius: 16px;
+	border: 1px solid var(--na-line);
+	background: var(--na-surface);
+	box-shadow: 0 20px 60px rgba(0, 0, 0, 0.85);
+	overflow: hidden;
+}
+
+.na-pdf-modal-header {
+	flex: 0 0 auto;
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 16px;
+	padding: 14px 20px;
+	background: var(--na-surface-card);
+	border-bottom: 1px solid var(--na-line);
+}
+
+.na-pdf-modal-header-left {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	min-width: 0;
+	flex: 1;
+}
+
+.na-pdf-header-icon {
+	color: var(--na-brand);
+	font-size: 20px;
+	width: 20px;
+	height: 20px;
+	flex-shrink: 0;
+}
+
+.na-pdf-modal-title {
+	margin: 0;
+	font-family: var(--na-font-display);
+	font-size: 16px;
+	font-weight: 700;
+	color: var(--na-ink);
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
+.na-pdf-modal-header-actions {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	flex-shrink: 0;
+}
+
+.na-pdf-viewport-container {
+	flex: 1 1 auto;
+	width: 100%;
+	height: 100%;
+	background: #ffffff !important;
+	color: #000000 !important;
+	position: relative;
+	overflow: hidden;
+	isolation: isolate;
+}
+
+.na-pdf-iframe {
+	width: 100%;
+	height: 100%;
+	border: none;
+	background: #ffffff !important;
+	display: block;
+	color-scheme: light;
 }
 
 /* Modal Header */

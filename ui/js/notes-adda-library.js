@@ -379,6 +379,12 @@
 						$el.attr('aria-label', newLiked ? 'Unlike note' : 'Like note');
 					});
 
+					// Synchronize note details metrics card if open
+					$(`.na-metric-likes[data-id="${id}"]`).each(function() {
+						$(this).find('.na-metric-like-count').text(newCount);
+						$(this).find('.na-metric-like-unit').text(newCount === 1 ? 'Like' : 'Likes');
+					});
+
 					// Update cached note data on card if present
 					$(`.na-card[data-id="${id}"]`).each(function() {
 						const cardData = $(this).data('note');
