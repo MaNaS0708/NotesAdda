@@ -7,6 +7,36 @@ if ( ! defined( 'ABSPATH' ) ) {
 class Notes_Adda_Reports {
 
 	/**
+	 * Ensure reports table has all required columns.
+	 */
+	public static function ensure_schema() {
+		global $wpdb;
+		$reports_table = $wpdb->prefix . 'notes_adda_reports';
+
+		$table_exists = $wpdb->get_var( $wpdb->prepare( "SHOW TABLES LIKE %s", $reports_table ) );
+		if ( ! $table_exists ) {
+			return;
+		}
+
+		$columns = $wpdb->get_col( "SHOW COLUMNS FROM $reports_table" );
+		if ( empty( $columns ) ) {
+			return;
+		}
+
+		if ( ! in_array( 'resolved_by', $columns, true ) ) {
+			$wpdb->query( "ALTER TABLE $reports_table ADD COLUMN resolved_by bigint(20) unsigned DEFAULT NULL AFTER status" );
+		}
+
+		if ( ! in_array( 'resolved_at', $columns, true ) ) {
+			$wpdb->query( "ALTER TABLE $reports_table ADD COLUMN resolved_at datetime DEFAULT NULL AFTER resolved_by" );
+		}
+
+		if ( ! in_array( 'resolution_note', $columns, true ) ) {
+			$wpdb->query( "ALTER TABLE $reports_table ADD COLUMN resolution_note text DEFAULT NULL AFTER resolved_at" );
+		}
+	}
+
+	/**
 	 * Retrieve a report by its ID.
 	 *
 	 * @param int $report_id Report ID.
@@ -345,6 +375,11 @@ class Notes_Adda_Reports {
 	public static function resolve_report( $report_id, $actor_id, $decision, $resolution_note ) {
 		global $wpdb;
 
+		self::ensure_schema();
+		if ( class_exists( 'Notes_Adda_Notes' ) && method_exists( 'Notes_Adda_Notes', 'ensure_review_columns' ) ) {
+			Notes_Adda_Notes::ensure_review_columns();
+		}
+
 		$report_id = (int) $report_id;
 		$actor_id  = (int) $actor_id;
 		$decision  = sanitize_key( trim( $decision ) );
@@ -409,7 +444,8 @@ class Notes_Adda_Reports {
 		);
 
 		if ( false === $updated_report ) {
-			return new WP_Error( 'notes_adda_report_update_failed', 'Failed to update report status.' );
+			$db_err = ! empty( $wpdb->last_error ) ? ' (' . $wpdb->last_error . ')' : '';
+			return new WP_Error( 'notes_adda_report_update_failed', 'Failed to update report status.' . $db_err );
 		}
 
 		$actor_name = $actor->display_name ? $actor->display_name : $actor->user_login;

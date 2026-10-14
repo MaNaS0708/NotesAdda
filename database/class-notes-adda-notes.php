@@ -303,6 +303,8 @@ class Notes_Adda_Notes {
 	public static function review( $note_id, $reviewer_id, $status, $review_note = '' ) {
 		global $wpdb;
 
+		self::ensure_review_columns();
+
 		$note_id     = (int) $note_id;
 		$reviewer_id = (int) $reviewer_id;
 
@@ -361,7 +363,8 @@ class Notes_Adda_Notes {
 		);
 
 		if ( false === $updated ) {
-			return new WP_Error( 'notes_adda_review_failed', 'Failed to update review status in database.' );
+			$db_err = ! empty( $wpdb->last_error ) ? ' (' . $wpdb->last_error . ')' : '';
+			return new WP_Error( 'notes_adda_review_failed', 'Failed to update review status in database.' . $db_err );
 		}
 
 		// Create persistent in-app notification for the note owner
@@ -651,5 +654,36 @@ class Notes_Adda_Notes {
 			'contributor'     => $contributor,
 			'tags'            => $tags,
 		);
+	}
+
+	/**
+	 * Upgrade-safe column verification for review workflows.
+	 */
+	public static function ensure_review_columns() {
+		global $wpdb;
+		$notes_table = $wpdb->prefix . 'notes_adda_notes';
+
+		$table_exists = $wpdb->get_var( $wpdb->prepare( "SHOW TABLES LIKE %s", $notes_table ) );
+		if ( ! $table_exists ) {
+			return;
+		}
+
+		$columns = $wpdb->get_col( "SHOW COLUMNS FROM $notes_table" );
+		if ( empty( $columns ) ) {
+			return;
+		}
+
+		if ( ! in_array( 'review_status', $columns, true ) ) {
+			$wpdb->query( "ALTER TABLE $notes_table ADD COLUMN review_status varchar(30) NOT NULL DEFAULT 'pending' AFTER like_count" );
+		}
+		if ( ! in_array( 'reviewed_by', $columns, true ) ) {
+			$wpdb->query( "ALTER TABLE $notes_table ADD COLUMN reviewed_by bigint(20) unsigned DEFAULT NULL AFTER review_status" );
+		}
+		if ( ! in_array( 'reviewed_at', $columns, true ) ) {
+			$wpdb->query( "ALTER TABLE $notes_table ADD COLUMN reviewed_at datetime DEFAULT NULL AFTER reviewed_by" );
+		}
+		if ( ! in_array( 'review_note', $columns, true ) ) {
+			$wpdb->query( "ALTER TABLE $notes_table ADD COLUMN review_note text DEFAULT NULL AFTER reviewed_at" );
+		}
 	}
 }

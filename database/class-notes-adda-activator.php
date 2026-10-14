@@ -14,6 +14,7 @@ class Notes_Adda_Activator {
 		self::migrate_subjects();
 		self::migrate_review_statuses();
 		self::migrate_ratings();
+		self::migrate_reports();
 		self::provision_pages();
 
 		update_option( 'notes_adda_version', NOTES_ADDA_VERSION );
@@ -446,6 +447,18 @@ class Notes_Adda_Activator {
 
 		if ( ! $has_subject_index ) {
 			$wpdb->query( "ALTER TABLE $expert_ratings_table ADD KEY subject (subject)" );
+		}
+	}
+
+	/**
+	 * Upgrade-safe migration: Ensure reports and notes schema columns exist.
+	 */
+	public static function migrate_reports() {
+		if ( class_exists( 'Notes_Adda_Reports' ) && method_exists( 'Notes_Adda_Reports', 'ensure_schema' ) ) {
+			Notes_Adda_Reports::ensure_schema();
+		}
+		if ( class_exists( 'Notes_Adda_Notes' ) && method_exists( 'Notes_Adda_Notes', 'ensure_review_columns' ) ) {
+			Notes_Adda_Notes::ensure_review_columns();
 		}
 	}
 
