@@ -499,9 +499,14 @@
 					} else {
 						$msg.text(res.data ? res.data.message : 'Error processing report moderation.').addClass('error');
 					}
-				}).fail(function() {
+				}).fail(function(xhr) {
 					$btn.prop('disabled', false).find('.na-btn-spinner').hide();
-					$msg.text('Network error while submitting moderation decision.').addClass('error');
+					const err = (xhr && xhr.responseJSON && xhr.responseJSON.data && xhr.responseJSON.data.message)
+						? xhr.responseJSON.data.message
+						: (xhr && xhr.responseJSON && xhr.responseJSON.message
+							? xhr.responseJSON.message
+							: 'Error processing moderation decision. Please check your session or permissions.');
+					$msg.text(err).addClass('error');
 				});
 				return;
 			}
@@ -524,9 +529,14 @@
 				} else {
 					$msg.text(res.data ? res.data.message : 'Error processing review.').addClass('error');
 				}
-			}).fail(function() {
+			}).fail(function(xhr) {
 				$btn.prop('disabled', false).find('.na-btn-spinner').hide();
-				$msg.text('Network error while submitting decision.').addClass('error');
+				const err = (xhr && xhr.responseJSON && xhr.responseJSON.data && xhr.responseJSON.data.message)
+					? xhr.responseJSON.data.message
+					: (xhr && xhr.responseJSON && xhr.responseJSON.message
+						? xhr.responseJSON.message
+						: 'Error processing review decision. Please check your session or permissions.');
+				$msg.text(err).addClass('error');
 			});
 		}
 	};
