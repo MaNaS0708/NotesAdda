@@ -232,6 +232,7 @@
 								${note.chapter ? `<span class="na-badge na-badge-chapter">${app.escapeHtml(note.chapter)}</span>` : ''}
 								${parseInt(note.is_whole_notes, 10) === 1 ? `<span class="na-badge na-badge-whole">Full Course</span>` : ''}
 								${statusBadgeHtml}
+								${(note.is_reported || parseInt(note.open_reports_count, 10) > 0) ? `<span class="na-badge na-badge-flagged" title="Under moderation review"><span class="dashicons dashicons-flag"></span> Under Review</span>` : ''}
 							</div>
 						</div>
 
@@ -298,7 +299,7 @@
 									</button>
 								` : ''}
 								${!isOwner && isVerified ? `
-									<button type="button" class="na-icon-btn na-btn-report" data-id="${note.id}" title="Report Note" aria-label="Report Note">
+									<button type="button" class="na-icon-btn na-btn-report ${note.user_has_reported ? 'reported' : ''}" data-id="${note.id}" data-title="${app.escapeHtml(note.title)}" data-subject="${app.escapeHtml(note.subject || '')}" title="${note.user_has_reported ? 'You have already reported this note' : 'Report Note'}" aria-label="Report Note" ${note.user_has_reported ? 'disabled' : ''}>
 										<span class="dashicons dashicons-flag" aria-hidden="true"></span>
 									</button>
 								` : ''}

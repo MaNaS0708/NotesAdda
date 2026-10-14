@@ -175,3 +175,48 @@
 	font-weight: 700;
 	color: #ffb703;
 }
+
+/* ==================================================
+   REPORTED NOTES & BADGES
+   ================================================== */
+.na-tab-badge {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	min-width: 18px;
+	height: 18px;
+	padding: 0 5px;
+	border-radius: 10px;
+	font-size: 11px;
+	font-weight: 700;
+	background: var(--na-danger, #ff3366);
+	color: #ffffff;
+	line-height: 1;
+	margin-left: 2px;
+}
+
+.na-card-report-box {
+	margin-top: 10px;
+	padding: 10px 14px;
+	border-radius: var(--na-radius-sm);
+	background: rgba(255, 51, 102, 0.08);
+	border: 1px solid rgba(255, 51, 102, 0.25);
+	font-size: 13px;
+	color: var(--na-ink);
+}
+
+.na-card-report-box strong {
+	color: var(--na-danger, #ff3366);
+	font-size: 12px;
+	text-transform: uppercase;
+	letter-spacing: 0.04em;
+	display: inline-block;
+	margin-right: 6px;
+}
+
+.na-badge-reported,
+.na-badge-flagged {
+	background: rgba(255, 51, 102, 0.12);
+	border-color: rgba(255, 51, 102, 0.35);
+	color: var(--na-danger, #ff3366);
+}

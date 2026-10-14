@@ -33,11 +33,17 @@
 			$(document).on('click', '.na-btn-report', function(e) {
 				e.preventDefault();
 				e.stopPropagation();
+				if ($(this).prop('disabled') || $(this).hasClass('reported')) return;
 				const noteId = $(this).data('id');
-				const reason = prompt('Please describe why you are reporting this note (copyright, spam, incorrect info):');
-				if (reason && reason.trim()) {
-					self.reportNote(noteId, reason.trim());
-				}
+				const title = $(this).data('title') || 'Selected Note';
+				const subject = $(this).data('subject') || '';
+				self.openReportModal(noteId, title, subject);
+			});
+
+			// Submit Report Form
+			$('#na-report-form').on('submit', function(e) {
+				e.preventDefault();
+				self.submitReport();
 			});
 
 			// PDF preview trigger
@@ -203,6 +209,7 @@
 							${note.chapter ? `<span class="na-badge na-badge-chapter">${app.escapeHtml(note.chapter)}</span>` : ''}
 							${parseInt(note.is_whole_notes, 10) === 1 ? `<span class="na-badge na-badge-whole">Full Course</span>` : ''}
 							${statusBadgeHtml}
+							${(note.is_reported || parseInt(note.open_reports_count, 10) > 0) ? `<span class="na-badge na-badge-flagged" title="Under moderation review"><span class="dashicons dashicons-flag"></span> Under Review</span>` : ''}
 						</div>
 						<h2 class="na-preview-title">${app.escapeHtml(note.title)}</h2>
 						<div class="na-card-meta" style="margin-top:10px; border:none; padding-top:0;">
@@ -260,8 +267,8 @@
 								</button>
 							` : ''}
 							${!isOwner && isVerified ? `
-								<button type="button" class="na-btn na-btn-ghost na-btn-report" data-id="${note.id}">
-									<span class="dashicons dashicons-flag"></span> <span>Report</span>
+								<button type="button" class="na-btn na-btn-ghost na-btn-report ${note.user_has_reported ? 'reported' : ''}" data-id="${note.id}" data-title="${app.escapeHtml(note.title)}" data-subject="${app.escapeHtml(note.subject || '')}" ${note.user_has_reported ? 'disabled title="You have already reported this note"' : ''}>
+									<span class="dashicons dashicons-flag"></span> <span>${note.user_has_reported ? 'Reported' : 'Report'}</span>
 								</button>
 							` : ''}
 						</div>
@@ -374,24 +381,76 @@
 		},
 
 		/**
-		 * Report inappropriate or copyrighted note.
+		 * Open Report Note Modal.
 		 */
-		reportNote: function(id, reason) {
+		openReportModal: function(noteId, title, subject) {
+			$('#na-report-note-id').val(noteId);
+			$('#na-report-note-title').text(title || 'Selected Note');
+			if (subject) {
+				$('#na-report-note-subject').text(subject);
+				$('#na-report-note-subject-row').show();
+			} else {
+				$('#na-report-note-subject-row').hide();
+			}
+			$('#na-report-reason').val('');
+			$('#na-report-modal-msg').text('').removeClass('error success');
+			$('#na-submit-report-btn').prop('disabled', false).find('.na-btn-spinner').hide();
+			$('#na-report-modal').addClass('open');
+		},
+
+		/**
+		 * Submit Report Note form.
+		 */
+		submitReport: function() {
 			const app = window.NotesAddaApp;
+			const noteId = $('#na-report-note-id').val();
+			const reason = $('#na-report-reason').val().trim();
+			const $msg = $('#na-report-modal-msg');
+			const $btn = $('#na-submit-report-btn');
+
+			if (!reason) {
+				$msg.text('Please specify the reason for reporting this note.').addClass('error');
+				return;
+			}
+
+			$btn.prop('disabled', true).find('.na-btn-spinner').show();
+			$msg.text('').removeClass('error success');
+
 			$.post(NotesAdda.ajax_url, {
 				action: 'notes_adda_create_report',
-				note_id: id,
+				note_id: noteId,
 				reason: reason,
 				_ajax_nonce: NotesAdda.nonce
 			}, function(res) {
+				$btn.prop('disabled', false).find('.na-btn-spinner').hide();
 				if (res.success) {
+					$('#na-report-modal').removeClass('open');
 					app.showToast('Report submitted for moderation. Thank you.', 'success');
+					$(`.na-btn-report[data-id="${noteId}"]`).addClass('reported').prop('disabled', true).attr('title', 'You have reported this note');
+					if (app.modules.notifications && typeof app.modules.notifications.loadNotifications === 'function') {
+						app.modules.notifications.loadNotifications();
+					}
+					if (app.modules.reviewQueue && typeof app.modules.reviewQueue.loadReportedCount === 'function') {
+						app.modules.reviewQueue.loadReportedCount();
+					}
 				} else {
-					app.showToast(res.data ? res.data.message : 'Error submitting report', 'error');
+					$msg.text(res.data ? res.data.message : 'Error submitting report.').addClass('error');
 				}
 			}).fail(function() {
-				app.showToast('Network error submitting report', 'error');
+				$btn.prop('disabled', false).find('.na-btn-spinner').hide();
+				$msg.text('Network error while submitting report.').addClass('error');
 			});
+		},
+
+		/**
+		 * Legacy fallback report method.
+		 */
+		reportNote: function(id, reason) {
+			this.openReportModal(id, '', '');
+			if (reason) {
+				$('#na-report-reason').val(reason);
+				this.submitReport();
+			}
 		}
 	};
 

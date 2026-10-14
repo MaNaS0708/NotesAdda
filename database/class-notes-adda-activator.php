@@ -104,9 +104,13 @@ class Notes_Adda_Activator {
 				reporter_id bigint(20) unsigned NOT NULL,
 				reason text NOT NULL,
 				status varchar(30) NOT NULL DEFAULT 'open',
+				resolved_by bigint(20) unsigned DEFAULT NULL,
+				resolved_at datetime DEFAULT NULL,
+				resolution_note text DEFAULT NULL,
 				created_at datetime NOT NULL,
 				PRIMARY KEY (id),
 				KEY note_id (note_id),
+				KEY reporter_id (reporter_id),
 				KEY status (status)
 			) $charset_collate;",
 

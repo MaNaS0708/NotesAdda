@@ -73,6 +73,9 @@ class Notes_Adda_Ajax {
 
 		// Reports
 		add_action( 'wp_ajax_notes_adda_create_report', array( __CLASS__, 'create_report' ) );
+		add_action( 'wp_ajax_notes_adda_get_reports', array( __CLASS__, 'get_reports' ) );
+		add_action( 'wp_ajax_notes_adda_get_reports_count', array( __CLASS__, 'get_reports_count' ) );
+		add_action( 'wp_ajax_notes_adda_resolve_report', array( __CLASS__, 'resolve_report' ) );
 		add_action( 'wp_ajax_notes_adda_update_report_status', array( __CLASS__, 'update_report_status' ) );
 
 		// Uploads
@@ -892,12 +895,89 @@ class Notes_Adda_Ajax {
 	}
 
 	/**
-	 * Update report status handler.
+	 * Get reports handler (for Experts and Admins).
+	 */
+	public static function get_reports() {
+		$user_id = self::check_auth();
+
+		$owner_id = (int) get_option( 'notes_adda_owner_id' );
+		$is_owner = ( $owner_id > 0 && $user_id === $owner_id );
+
+		if ( ! $is_owner && ! current_user_can( 'notes_adda_review_notes' ) && ! current_user_can( 'notes_adda_manage_users' ) && ! current_user_can( 'manage_options' ) ) {
+			self::send_error( new WP_Error( 'notes_adda_forbidden', 'You do not have permission to view reported notes.' ) );
+		}
+
+		$args = array(
+			'status'   => isset( $_GET['status'] ) ? sanitize_key( wp_unslash( $_GET['status'] ) ) : 'open',
+			'page'     => isset( $_GET['page'] ) ? max( 1, (int) $_GET['page'] ) : 1,
+			'per_page' => isset( $_GET['per_page'] ) ? max( 1, min( 100, (int) $_GET['per_page'] ) ) : 10,
+			'search'   => isset( $_GET['search'] ) ? sanitize_text_field( wp_unslash( $_GET['search'] ) ) : '',
+		);
+
+		$result = Notes_Adda_Reports::get_reports( $args );
+		wp_send_json_success( $result );
+	}
+
+	/**
+	 * Get open reports count handler.
+	 */
+	public static function get_reports_count() {
+		$user_id = self::check_auth();
+
+		$owner_id = (int) get_option( 'notes_adda_owner_id' );
+		$is_owner = ( $owner_id > 0 && $user_id === $owner_id );
+
+		if ( ! $is_owner && ! current_user_can( 'notes_adda_review_notes' ) && ! current_user_can( 'notes_adda_manage_users' ) && ! current_user_can( 'manage_options' ) ) {
+			self::send_error( new WP_Error( 'notes_adda_forbidden', 'You do not have permission to view reported counts.' ) );
+		}
+
+		$count = Notes_Adda_Reports::get_open_reports_count();
+		wp_send_json_success( array( 'open_count' => $count ) );
+	}
+
+	/**
+	 * Resolve report handler: accept (reject note) or dismiss (keep note verified).
+	 */
+	public static function resolve_report() {
+		$user_id = self::check_auth();
+
+		$owner_id = (int) get_option( 'notes_adda_owner_id' );
+		$is_owner = ( $owner_id > 0 && $user_id === $owner_id );
+
+		if ( ! $is_owner && ! current_user_can( 'notes_adda_review_notes' ) && ! current_user_can( 'notes_adda_manage_users' ) && ! current_user_can( 'manage_options' ) ) {
+			self::send_error( new WP_Error( 'notes_adda_forbidden', 'You do not have permission to resolve reports.' ) );
+		}
+
+		$report_id = isset( $_POST['report_id'] ) ? (int) $_POST['report_id'] : 0;
+		if ( $report_id <= 0 ) {
+			self::send_error( new WP_Error( 'notes_adda_invalid_report_id', 'Please provide a valid report ID.' ) );
+		}
+
+		$decision = isset( $_POST['decision'] ) ? sanitize_key( wp_unslash( $_POST['decision'] ) ) : '';
+		if ( ! in_array( $decision, array( 'accept', 'dismiss' ), true ) ) {
+			self::send_error( new WP_Error( 'notes_adda_invalid_decision', 'Invalid decision. Must be accept or dismiss.' ) );
+		}
+
+		$resolution_note = isset( $_POST['resolution_note'] ) ? wp_unslash( $_POST['resolution_note'] ) : '';
+
+		$result = Notes_Adda_Reports::resolve_report( $report_id, $user_id, $decision, $resolution_note );
+		if ( is_wp_error( $result ) ) {
+			self::send_error( $result );
+		}
+
+		wp_send_json_success( $result );
+	}
+
+	/**
+	 * Update report status handler (legacy).
 	 */
 	public static function update_report_status() {
 		$user_id = self::check_auth();
 
-		if ( ! current_user_can( 'notes_adda_review_notes' ) && ! current_user_can( 'notes_adda_manage_users' ) && ! current_user_can( 'manage_options' ) ) {
+		$owner_id = (int) get_option( 'notes_adda_owner_id' );
+		$is_owner = ( $owner_id > 0 && $user_id === $owner_id );
+
+		if ( ! $is_owner && ! current_user_can( 'notes_adda_review_notes' ) && ! current_user_can( 'notes_adda_manage_users' ) && ! current_user_can( 'manage_options' ) ) {
 			self::send_error( new WP_Error( 'notes_adda_forbidden', 'You do not have permission to update report status.' ) );
 		}
 

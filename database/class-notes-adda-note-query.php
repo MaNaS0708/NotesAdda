@@ -82,6 +82,7 @@ class Notes_Adda_Note_Query {
 		$note_tags_table = $wpdb->prefix . 'notes_adda_note_tags';
 		$tags_table      = $wpdb->prefix . 'notes_adda_tags';
 		$bookmarks_table = $wpdb->prefix . 'notes_adda_bookmarks';
+		$reports_table   = $wpdb->prefix . 'notes_adda_reports';
 
 		$where_clauses = array( '1=1' );
 		$query_params  = array();
@@ -188,7 +189,7 @@ class Notes_Adda_Note_Query {
 			$order_clause = "ORDER BY n.$orderby_raw $order_raw";
 		}
 
-		$items_sql          = "SELECT n.* FROM $notes_table n WHERE $where_sql $order_clause LIMIT %d OFFSET %d";
+		$items_sql          = "SELECT n.*, (SELECT COUNT(*) FROM $reports_table r WHERE r.note_id = n.id AND r.status = 'open') AS open_reports_count FROM $notes_table n WHERE $where_sql $order_clause LIMIT %d OFFSET %d";
 		$items_params       = array_merge( $query_params, array( $per_page, $offset ) );
 		$prepared_items_sql = $wpdb->prepare( $items_sql, $items_params );
 
@@ -228,13 +229,19 @@ class Notes_Adda_Note_Query {
 					$item->reviewer_rating = null;
 				}
 
-				// Bookmark and like status
+				$open_rep_count           = isset( $item->open_reports_count ) ? (int) $item->open_reports_count : 0;
+				$item->open_reports_count = $open_rep_count;
+				$item->is_reported        = ( $open_rep_count > 0 );
+
+				// Bookmark, like, and report status
 				if ( $current_user_id > 0 ) {
-					$item->is_bookmarked = Notes_Adda_Bookmarks::has_bookmarked( (int) $item->id, $current_user_id );
-					$item->is_liked      = class_exists( 'Notes_Adda_Likes' ) ? Notes_Adda_Likes::has_liked( (int) $item->id, $current_user_id ) : false;
+					$item->is_bookmarked     = Notes_Adda_Bookmarks::has_bookmarked( (int) $item->id, $current_user_id );
+					$item->is_liked          = class_exists( 'Notes_Adda_Likes' ) ? Notes_Adda_Likes::has_liked( (int) $item->id, $current_user_id ) : false;
+					$item->user_has_reported = (bool) $wpdb->get_var( $wpdb->prepare( "SELECT 1 FROM $reports_table WHERE note_id = %d AND reporter_id = %d AND status = 'open' LIMIT 1", $item->id, $current_user_id ) );
 				} else {
-					$item->is_bookmarked = false;
-					$item->is_liked      = false;
+					$item->is_bookmarked     = false;
+					$item->is_liked          = false;
+					$item->user_has_reported = false;
 				}
 			}
 		}

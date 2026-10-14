@@ -98,6 +98,7 @@ $can_users            = $is_owner || current_user_can( 'notes_adda_manage_users'
 		<?php include NOTES_ADDA_PATH . 'ui/html/partials/upload-modal.php'; ?>
 		<?php include NOTES_ADDA_PATH . 'ui/html/partials/subject-request-modal.php'; ?>
 		<?php include NOTES_ADDA_PATH . 'ui/html/partials/pdf-preview-modal.php'; ?>
+		<?php include NOTES_ADDA_PATH . 'ui/html/partials/report-modal.php'; ?>
 	<?php endif; ?>
 
 	<!-- Star Rating Gradients (Hidden Defs) -->

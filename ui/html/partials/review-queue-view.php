@@ -23,6 +23,11 @@ if ( ! defined( 'ABSPATH' ) ) {
 			<span class="dashicons dashicons-clock" aria-hidden="true"></span>
 			<span>Pending Notes</span>
 		</button>
+		<button type="button" class="na-tab-btn" data-review-status="reported" role="tab" aria-selected="false">
+			<span class="dashicons dashicons-flag" aria-hidden="true"></span>
+			<span>Reported Notes</span>
+			<span id="na-review-reported-badge" class="na-tab-badge" style="display:none;">0</span>
+		</button>
 		<button type="button" class="na-tab-btn" data-review-status="verified" role="tab" aria-selected="false">
 			<span class="dashicons dashicons-yes-alt" aria-hidden="true"></span>
 			<span>Verified Notes</span>
@@ -74,12 +79,21 @@ if ( ! defined( 'ABSPATH' ) ) {
 		<div class="na-modal-body">
 			<form id="na-review-form" class="na-form">
 				<input type="hidden" id="na-review-note-id" name="note_id" value="">
+				<input type="hidden" id="na-review-report-id" name="report_id" value="">
 				<input type="hidden" id="na-review-action-type" name="action_type" value="verify">
 
 				<div class="na-review-meta-preview">
 					<div class="na-review-meta-item">
 						<span class="na-review-meta-label">Note Title:</span>
 						<span id="na-review-target-title" class="na-review-meta-val"></span>
+					</div>
+					<div class="na-review-meta-item" id="na-review-meta-reporter-row" style="display:none;">
+						<span class="na-review-meta-label">Reported by:</span>
+						<span id="na-review-target-reporter" class="na-review-meta-val"></span>
+					</div>
+					<div class="na-review-meta-item" id="na-review-meta-reason-row" style="display:none;">
+						<span class="na-review-meta-label">Report Reason:</span>
+						<span id="na-review-target-reported-reason" class="na-review-meta-val" style="color:var(--na-warning); font-style:italic;"></span>
 					</div>
 					<div class="na-review-meta-item">
 						<span class="na-review-meta-label">Action:</span>
